@@ -11,6 +11,7 @@ export type Settings = {
   baseUnitB: number;
   minOdds: number; // 推奨最低オッズ（既定 2.7）
   activeSlot: 'A' | 'B';
+  initialCapital: number; // 開始資金（円）
 };
 
 export type HistoryEntry = {
@@ -27,12 +28,27 @@ export type HistoryEntry = {
   running: number; // そのスロットの累計収支（この記録時点）
 };
 
+export type FundEntry = {
+  id: string;
+  ts: number;
+  date: string;
+  amount: number; // 追加は正の値、引き出しは負の値
+  note: string;
+};
+
 export function defaultSlotState(): SlotState {
   return { sequence: [1, 1], step: 0, totalPL: 0, peak: 0, maxDrawdown: 0 };
 }
 
 export function defaultSettings(): Settings {
-  return { baseUnitA: 1000, baseUnitB: 1000, minOdds: 2.7, activeSlot: 'A' };
+  return { baseUnitA: 1000, baseUnitB: 1000, minOdds: 2.7, activeSlot: 'A', initialCapital: 0 };
+}
+
+// ココモ法の数列（1,1,2,3,5,8...）を先頭からn項分返す（資金シミュレーション表示用）
+export function cocomoSequence(n: number): number[] {
+  const seq = [1, 1];
+  while (seq.length < n) seq.push(seq[seq.length - 1] + seq[seq.length - 2]);
+  return seq.slice(0, n);
 }
 
 // 数列が step まで足りない場合は前2項の和で伸ばす（フィボナッチ的な伸び方）

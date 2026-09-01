@@ -42,7 +42,8 @@ export async function DELETE(req: NextRequest) {
       redis.set(KEYS.slot('A'), defaultSlotState()),
       redis.set(KEYS.slot('B'), defaultSlotState()),
       redis.set(KEYS.settings, defaultSettings()),
-      redis.del(KEYS.history)
+      redis.del(KEYS.history),
+      redis.del(KEYS.funds)
     ]);
   }
   return NextResponse.json({ ok: true });

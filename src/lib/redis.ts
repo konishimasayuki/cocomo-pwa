@@ -6,5 +6,6 @@ export const redis = Redis.fromEnv();
 export const KEYS = {
   settings: 'cocomo:settings',
   slot: (slot: 'A' | 'B') => `cocomo:slot:${slot}`,
-  history: 'cocomo:history'
+  history: 'cocomo:history',
+  funds: 'cocomo:funds'
 };
