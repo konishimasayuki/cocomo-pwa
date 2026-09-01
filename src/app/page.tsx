@@ -36,9 +36,64 @@ export default function Home() {
   const [odds, setOdds] = useState('2.7');
   const [saving, setSaving] = useState(false);
 
+  const [activeVenues, setActiveVenues] = useState<{ code: string; name: string }[]>([]);
+  const [venuesLoading, setVenuesLoading] = useState(false);
+  const [raceTimes, setRaceTimes] = useState<{ race: number; deadline: string | null }[]>([]);
+  const [racesLoading, setRacesLoading] = useState(false);
+
   const [oddsGrid, setOddsGrid] = useState<Record<string, number> | null>(null);
   const [oddsLoading, setOddsLoading] = useState(false);
   const [oddsError, setOddsError] = useState('');
+
+  // 日付が変わったら「その日に開催中の会場」一覧を取得
+  useEffect(() => {
+    const hd = date.replace(/-/g, '');
+    setVenuesLoading(true);
+    fetch(`/api/schedule?hd=${hd}`)
+      .then((r) => r.json())
+      .then((d) => {
+        const venues = d.venues ?? [];
+        setActiveVenues(venues);
+        if (venues.length > 0 && !venues.some((v: { name: string }) => v.name === venue)) {
+          setVenue(venues[0].name);
+        }
+      })
+      .catch(() => setActiveVenues([]))
+      .finally(() => setVenuesLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date]);
+
+  // 会場か日付が変わったら、その会場の各レース締切時刻を取得
+  useEffect(() => {
+    const hd = date.replace(/-/g, '');
+    const jcd = venueCode(venue);
+    setRacesLoading(true);
+    fetch(`/api/racetimes?jcd=${jcd}&hd=${hd}`)
+      .then((r) => r.json())
+      .then((d) => setRaceTimes(d.races ?? []))
+      .catch(() => setRaceTimes([]))
+      .finally(() => setRacesLoading(false));
+  }, [date, venue]);
+
+  const isToday = date === todayStr();
+  const nowHM = useMemo(() => {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }, []);
+
+  const availableRaces = useMemo(() => {
+    if (raceTimes.length === 0) return Array.from({ length: 12 }, (_, i) => i + 1);
+    return raceTimes
+      .filter((r) => !isToday || !r.deadline || r.deadline >= nowHM)
+      .map((r) => r.race);
+  }, [raceTimes, isToday, nowHM]);
+
+  useEffect(() => {
+    if (availableRaces.length > 0 && !availableRaces.includes(race)) {
+      setRace(availableRaces[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableRaces]);
 
   useEffect(() => {
     fetch('/api/state')
@@ -170,21 +225,31 @@ export default function Home() {
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
         <div className="field-row">
-          <span>会場</span>
+          <span>会場{venuesLoading ? '（更新中…）' : ''}</span>
           <select value={venue} onChange={(e) => setVenue(e.target.value)}>
-            {VENUES.map((v) => (
+            {(activeVenues.length > 0 ? activeVenues.map((v) => v.name) : VENUES).map((v) => (
               <option key={v} value={v}>{v}</option>
             ))}
           </select>
         </div>
+        {activeVenues.length === 0 && !venuesLoading && (
+          <div style={{ fontSize: 10.5, color: 'var(--text-muted)', textAlign: 'right', marginTop: -6, marginBottom: 8 }}>
+            本日開催中の会場が見つかりませんでした（全会場を表示中）
+          </div>
+        )}
         <div className="field-row">
-          <span>レース</span>
+          <span>レース{racesLoading ? '（更新中…）' : ''}</span>
           <select value={race} onChange={(e) => setRace(Number(e.target.value))}>
-            {Array.from({ length: 12 }, (_, i) => i + 1).map((r) => (
+            {availableRaces.map((r) => (
               <option key={r} value={r}>{r}R</option>
             ))}
           </select>
         </div>
+        {isToday && availableRaces.length === 0 && !racesLoading && (
+          <div style={{ fontSize: 10.5, color: 'var(--text-muted)', textAlign: 'right', marginTop: -6 }}>
+            本日はこの後の発売中レースがありません
+          </div>
+        )}
       </div>
 
       {/* トートボード風表示 */}
