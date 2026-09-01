@@ -215,7 +215,9 @@ export default function HistoryPage() {
             <div style={{ color: 'var(--text-muted)' }}>
               {h.sport ? `[${h.sport}] ` : ''}{h.venue} {h.race}R ・{h.slot}
             </div>
-            <div className="mono" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{h.combo || '-'}</div>
+            <div className="mono" style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 10.5 }}>
+              {Array.isArray(h.combo) ? h.combo.join(',') : h.combo || '-'}
+            </div>
             <div className="mono" style={{ textAlign: 'right' }}>{fmt(h.bet)}</div>
             <div style={{ textAlign: 'center', fontWeight: 700, color: h.won ? 'var(--win)' : 'var(--loss)' }}>
               {h.won ? '勝ち' : '負け'}

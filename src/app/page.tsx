@@ -36,7 +36,7 @@ export default function Home() {
   const [date, setDate] = useState(todayStr());
   const [venue, setVenue] = useState(SPORT_VENUES['競艇'][0]);
   const [race, setRace] = useState(1);
-  const [combo, setCombo] = useState('1-2');
+  const [combos, setCombos] = useState<string[]>(['1-2']);
   const [saving, setSaving] = useState(false);
 
   const [activeVenues, setActiveVenues] = useState<{ code: string; name: string }[]>([]);
@@ -127,6 +127,16 @@ export default function Home() {
   const nextBet = useMemo(() => computeNextBet(state, baseUnit), [state, baseUnit]);
   const invested = useMemo(() => cycleInvested(state, baseUnit), [state, baseUnit]);
 
+  function updateCombo(i: number, v: string) {
+    setCombos((prev) => prev.map((c, idx) => (idx === i ? v : c)));
+  }
+  function addCombo() {
+    setCombos((prev) => (prev.length >= 10 ? prev : [...prev, '']));
+  }
+  function removeCombo(i: number) {
+    setCombos((prev) => prev.filter((_, idx) => idx !== i));
+  }
+
   async function saveAll(newSettings: Settings, newSlotA: SlotState, newSlotB: SlotState) {
     setSaving(true);
     await fetch('/api/state', {
@@ -159,7 +169,9 @@ export default function Home() {
       venue,
       race,
       slot: activeSlot,
-      combo: combo.trim() || '-',
+      combo: combos.map((c) => c.trim()).filter(Boolean).length > 0
+        ? combos.map((c) => c.trim()).filter(Boolean)
+        : ['-'],
       bet,
       odds: oddsNum,
       won,
@@ -204,28 +216,6 @@ export default function Home() {
         <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>推奨オッズ {settings.minOdds}倍以上</div>
       </header>
 
-      {/* 種目切替 */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-        {SPORTS.map((s) => (
-          <button
-            key={s}
-            onClick={() => setSport(s)}
-            style={{
-              flex: 1,
-              padding: '9px 0',
-              borderRadius: 8,
-              border: `1px solid ${sport === s ? 'var(--accent)' : 'var(--border)'}`,
-              background: sport === s ? 'rgba(232,163,61,0.12)' : 'var(--panel)',
-              color: sport === s ? 'var(--text)' : 'var(--text-muted)',
-              fontWeight: 600,
-              fontSize: 12.5
-            }}
-          >
-            {s}
-          </button>
-        ))}
-      </div>
-
       {/* スロット切替 */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
         {(['A', 'B'] as const).map((s) => (
@@ -254,6 +244,31 @@ export default function Home() {
           <span>日付</span>
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
+
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 13, marginBottom: 6 }}>種目</div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {SPORTS.map((s) => (
+              <button
+                key={s}
+                onClick={() => setSport(s)}
+                style={{
+                  flex: 1,
+                  padding: '8px 0',
+                  borderRadius: 8,
+                  border: `1px solid ${sport === s ? 'var(--accent)' : 'var(--border)'}`,
+                  background: sport === s ? 'rgba(232,163,61,0.12)' : 'var(--panel-2)',
+                  color: sport === s ? 'var(--text)' : 'var(--text-muted)',
+                  fontWeight: 600,
+                  fontSize: 12
+                }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="field-row">
           <span>会場{venuesLoading ? '（更新中…）' : ''}</span>
           <select value={venue} onChange={(e) => setVenue(e.target.value)}>
@@ -280,9 +295,44 @@ export default function Home() {
             本日はこの後の発売中レースがありません
           </div>
         )}
-        <div className="field-row">
-          <span>賭け目（例: 1-2）</span>
-          <input type="text" value={combo} onChange={(e) => setCombo(e.target.value)} placeholder="1-2" style={{ textAlign: 'right' }} />
+        <div style={{ marginTop: 4 }}>
+          <div style={{ fontSize: 13, marginBottom: 6 }}>賭け目（例: 1-2）</div>
+          {combos.map((c, i) => (
+            <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+              <input
+                type="text"
+                value={c}
+                onChange={(e) => updateCombo(i, e.target.value)}
+                placeholder="1-2"
+                style={{
+                  flex: 1,
+                  background: 'var(--panel-2)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text)',
+                  borderRadius: 6,
+                  padding: '7px 9px',
+                  fontSize: 13,
+                  textAlign: 'left'
+                }}
+              />
+              {combos.length > 1 && (
+                <button
+                  onClick={() => removeCombo(i)}
+                  style={{ width: 36, borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 14 }}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ))}
+          {combos.length < 10 && (
+            <button
+              onClick={addCombo}
+              style={{ width: '100%', padding: '9px 0', borderRadius: 8, border: '1px dashed var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 12.5, marginTop: 2 }}
+            >
+              + 賭け目を追加
+            </button>
+          )}
         </div>
       </div>
 
@@ -361,7 +411,7 @@ export default function Home() {
           >
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4, textAlign: 'center' }}>払戻オッズを入力</div>
             <div style={{ fontSize: 10.5, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 14 }}>
-              {venue} {race}R ・ 賭け目 {combo || '-'}
+              {venue} {race}R ・ 賭け目 {combos.filter(Boolean).join(', ') || '-'}
             </div>
             <input
               type="number"

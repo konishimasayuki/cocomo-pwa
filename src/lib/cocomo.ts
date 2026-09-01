@@ -22,7 +22,7 @@ export type HistoryEntry = {
   venue: string;
   race: number;
   slot: 'A' | 'B';
-  combo: string;  // 賭け目（例: "1-2"）
+  combo: string[]; // 賭け目（例: ["1-2", "1-3"]）複数買い対応
   bet: number;
   odds: number | null;
   won: boolean;
