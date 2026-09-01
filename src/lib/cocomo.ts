@@ -18,6 +18,7 @@ export type HistoryEntry = {
   id: string;
   ts: number;
   date: string;   // YYYY-MM-DD
+  sport: string;  // 競馬/競艇/競輪/オート
   venue: string;
   race: number;
   slot: 'A' | 'B';

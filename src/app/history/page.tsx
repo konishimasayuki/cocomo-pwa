@@ -213,7 +213,7 @@ export default function HistoryPage() {
             <div style={{ color: 'var(--text-muted)' }}>{h.date.slice(5)}</div>
             <div className="mono" style={{ color: 'var(--text-muted)' }}>{fmtTime(h.ts)}</div>
             <div style={{ color: 'var(--text-muted)' }}>
-              {h.venue} {h.race}R ・{h.slot}
+              {h.sport ? `[${h.sport}] ` : ''}{h.venue} {h.race}R ・{h.slot}
             </div>
             <div className="mono" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{h.combo || '-'}</div>
             <div className="mono" style={{ textAlign: 'right' }}>{fmt(h.bet)}</div>

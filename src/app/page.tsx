@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { VENUES, venueCode } from '@/lib/venues';
+import { SPORT_VENUES, SportType, venueCode } from '@/lib/venues';
 import {
   Settings,
   SlotState,
@@ -12,6 +12,8 @@ import {
   cycleInvested,
   applyResult
 } from '@/lib/cocomo';
+
+const SPORTS: SportType[] = ['競艇', '競馬', '競輪', 'オート'];
 
 function todayStr() {
   const d = new Date();
@@ -30,11 +32,11 @@ export default function Home() {
   const [slotA, setSlotA] = useState<SlotState>(defaultSlotState());
   const [slotB, setSlotB] = useState<SlotState>(defaultSlotState());
 
+  const [sport, setSport] = useState<SportType>('競艇');
   const [date, setDate] = useState(todayStr());
-  const [venue, setVenue] = useState(VENUES[0]);
+  const [venue, setVenue] = useState(SPORT_VENUES['競艇'][0]);
   const [race, setRace] = useState(1);
   const [combo, setCombo] = useState('1-2');
-  const [odds, setOdds] = useState('2.7');
   const [saving, setSaving] = useState(false);
 
   const [activeVenues, setActiveVenues] = useState<{ code: string; name: string }[]>([]);
@@ -42,12 +44,19 @@ export default function Home() {
   const [raceTimes, setRaceTimes] = useState<{ race: number; deadline: string | null }[]>([]);
   const [racesLoading, setRacesLoading] = useState(false);
 
-  const [oddsGrid, setOddsGrid] = useState<Record<string, number> | null>(null);
-  const [oddsLoading, setOddsLoading] = useState(false);
-  const [oddsError, setOddsError] = useState('');
+  const [winModalOpen, setWinModalOpen] = useState(false);
+  const [winOdds, setWinOdds] = useState('');
 
-  // 日付が変わったら「その日に開催中の会場」一覧を取得
+  // 種目を切り替えたら会場を先頭にリセット
   useEffect(() => {
+    setVenue(SPORT_VENUES[sport][0]);
+    setActiveVenues([]);
+    setRace(1);
+  }, [sport]);
+
+  // 競艇のみ: 日付が変わったら「その日に開催中の会場」一覧を取得
+  useEffect(() => {
+    if (sport !== '競艇') return;
     const hd = date.replace(/-/g, '');
     setVenuesLoading(true);
     fetch(`/api/schedule?hd=${hd}`)
@@ -62,10 +71,14 @@ export default function Home() {
       .catch(() => setActiveVenues([]))
       .finally(() => setVenuesLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date]);
+  }, [date, sport]);
 
-  // 会場か日付が変わったら、その会場の各レース締切時刻を取得
+  // 競艇のみ: 会場か日付が変わったら、その会場の各レース締切時刻を取得
   useEffect(() => {
+    if (sport !== '競艇') {
+      setRaceTimes([]);
+      return;
+    }
     const hd = date.replace(/-/g, '');
     const jcd = venueCode(venue);
     setRacesLoading(true);
@@ -74,7 +87,7 @@ export default function Home() {
       .then((d) => setRaceTimes(d.races ?? []))
       .catch(() => setRaceTimes([]))
       .finally(() => setRacesLoading(false));
-  }, [date, venue]);
+  }, [date, venue, sport]);
 
   const isToday = date === todayStr();
   const nowHM = useMemo(() => {
@@ -83,11 +96,11 @@ export default function Home() {
   }, []);
 
   const availableRaces = useMemo(() => {
-    if (raceTimes.length === 0) return Array.from({ length: 12 }, (_, i) => i + 1);
+    if (sport !== '競艇' || raceTimes.length === 0) return Array.from({ length: 12 }, (_, i) => i + 1);
     return raceTimes
       .filter((r) => !isToday || !r.deadline || r.deadline >= nowHM)
       .map((r) => r.race);
-  }, [raceTimes, isToday, nowHM]);
+  }, [raceTimes, isToday, nowHM, sport]);
 
   useEffect(() => {
     if (availableRaces.length > 0 && !availableRaces.includes(race)) {
@@ -130,8 +143,7 @@ export default function Home() {
     saveAll(next, slotA, slotB);
   }
 
-  async function recordResult(won: boolean) {
-    const oddsNum = won ? parseFloat(odds) || 0 : null;
+  async function recordResult(won: boolean, oddsNum: number | null) {
     const { nextState, bet, pl } = applyResult(state, baseUnit, won, oddsNum);
 
     const nextSlotA = activeSlot === 'A' ? nextState : slotA;
@@ -143,6 +155,7 @@ export default function Home() {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       ts: Date.now(),
       date,
+      sport,
       venue,
       race,
       slot: activeSlot,
@@ -164,39 +177,54 @@ export default function Home() {
     ]);
   }
 
-  const oddsWarn = odds !== '' && parseFloat(odds) < settings.minOdds;
-
-  async function fetchOdds() {
-    setOddsLoading(true);
-    setOddsError('');
-    setOddsGrid(null);
-    try {
-      const hd = date.replace(/-/g, '');
-      const jcd = venueCode(venue);
-      const res = await fetch(`/api/odds?jcd=${jcd}&hd=${hd}&rno=${race}`);
-      const data = await res.json();
-      if (!res.ok) {
-        setOddsError(data.error || 'オッズを取得できませんでした');
-      } else {
-        setOddsGrid(data.combos);
-      }
-    } catch {
-      setOddsError('通信エラーが発生しました');
-    } finally {
-      setOddsLoading(false);
-    }
+  function openWinModal() {
+    setWinOdds('');
+    setWinModalOpen(true);
   }
+
+  function confirmWin() {
+    const n = parseFloat(winOdds);
+    if (!n || n <= 0) return;
+    setWinModalOpen(false);
+    recordResult(true, n);
+  }
+
+  const winOddsWarn = winOdds !== '' && parseFloat(winOdds) > 0 && parseFloat(winOdds) < settings.minOdds;
 
   if (loading) {
     return <div className="page" style={{ textAlign: 'center', paddingTop: 40, color: 'var(--text-muted)' }}>読み込み中…</div>;
   }
 
+  const venueOptions = sport === '競艇' && activeVenues.length > 0 ? activeVenues.map((v) => v.name) : SPORT_VENUES[sport];
+
   return (
     <div className="page">
       <header style={{ marginBottom: 14 }}>
         <h1 style={{ fontSize: 15, fontWeight: 600 }}>ココモ法 資金管理</h1>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>競艇 / 推奨オッズ {settings.minOdds}倍以上</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>推奨オッズ {settings.minOdds}倍以上</div>
       </header>
+
+      {/* 種目切替 */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+        {SPORTS.map((s) => (
+          <button
+            key={s}
+            onClick={() => setSport(s)}
+            style={{
+              flex: 1,
+              padding: '9px 0',
+              borderRadius: 8,
+              border: `1px solid ${sport === s ? 'var(--accent)' : 'var(--border)'}`,
+              background: sport === s ? 'rgba(232,163,61,0.12)' : 'var(--panel)',
+              color: sport === s ? 'var(--text)' : 'var(--text-muted)',
+              fontWeight: 600,
+              fontSize: 12.5
+            }}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
 
       {/* スロット切替 */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
@@ -229,12 +257,12 @@ export default function Home() {
         <div className="field-row">
           <span>会場{venuesLoading ? '（更新中…）' : ''}</span>
           <select value={venue} onChange={(e) => setVenue(e.target.value)}>
-            {(activeVenues.length > 0 ? activeVenues.map((v) => v.name) : VENUES).map((v) => (
+            {venueOptions.map((v) => (
               <option key={v} value={v}>{v}</option>
             ))}
           </select>
         </div>
-        {activeVenues.length === 0 && !venuesLoading && (
+        {sport === '競艇' && activeVenues.length === 0 && !venuesLoading && (
           <div style={{ fontSize: 10.5, color: 'var(--text-muted)', textAlign: 'right', marginTop: -6, marginBottom: 8 }}>
             本日開催中の会場が見つかりませんでした（全会場を表示中）
           </div>
@@ -247,11 +275,15 @@ export default function Home() {
             ))}
           </select>
         </div>
-        {isToday && availableRaces.length === 0 && !racesLoading && (
+        {sport === '競艇' && isToday && availableRaces.length === 0 && !racesLoading && (
           <div style={{ fontSize: 10.5, color: 'var(--text-muted)', textAlign: 'right', marginTop: -6 }}>
             本日はこの後の発売中レースがありません
           </div>
         )}
+        <div className="field-row">
+          <span>賭け目（例: 1-2）</span>
+          <input type="text" value={combo} onChange={(e) => setCombo(e.target.value)} placeholder="1-2" style={{ textAlign: 'right' }} />
+        </div>
       </div>
 
       {/* トートボード風表示 */}
@@ -269,70 +301,15 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="card">
-        <div className="field-row">
-          <span>賭け目（例: 1-2）</span>
-          <input type="text" value={combo} onChange={(e) => setCombo(e.target.value)} placeholder="1-2" style={{ textAlign: 'right' }} />
-        </div>
-        <div className="field-row">
-          <span>払戻オッズ（勝った場合）</span>
-          <input type="number" step="0.1" value={odds} onChange={(e) => setOdds(e.target.value)} />
-        </div>
-        {oddsWarn && (
-          <div style={{ fontSize: 11, color: 'var(--loss)', marginTop: 6, textAlign: 'right' }}>
-            推奨オッズ({settings.minOdds}倍)未満です
-          </div>
-        )}
-        <button
-          onClick={fetchOdds}
-          disabled={oddsLoading}
-          style={{ width: '100%', marginTop: 10, padding: '9px 0', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 12 }}
-        >
-          {oddsLoading ? '取得中…' : `${venue} ${race}R の2連単オッズを取得`}
-        </button>
-        {oddsError && <div style={{ fontSize: 11, color: 'var(--loss)', marginTop: 8, textAlign: 'center' }}>{oddsError}</div>}
-        {oddsGrid && (
-          <div style={{ marginTop: 10 }}>
-            <div style={{ fontSize: 10.5, color: 'var(--text-muted)', marginBottom: 6, textAlign: 'center' }}>
-              タップすると上のオッズ欄に反映されます
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
-              {Object.entries(oddsGrid)
-                .sort((a, b) => a[1] - b[1])
-                .map(([combo, v]) => (
-                  <button
-                    key={combo}
-                    onClick={() => {
-                      setOdds(String(v));
-                      setCombo(combo);
-                    }}
-                    style={{
-                      padding: '6px 2px',
-                      borderRadius: 6,
-                      border: '1px solid var(--border)',
-                      background: 'var(--panel-2)',
-                      color: 'var(--text)',
-                      fontSize: 10.5
-                    }}
-                  >
-                    <div className="mono" style={{ color: 'var(--text-muted)' }}>{combo}</div>
-                    <div className="mono" style={{ fontWeight: 600 }}>{v}</div>
-                  </button>
-                ))}
-            </div>
-          </div>
-        )}
-      </div>
-
       <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
         <button
-          onClick={() => recordResult(true)}
+          onClick={openWinModal}
           style={{ flex: 1, padding: '16px 0', borderRadius: 10, border: 'none', background: 'var(--win)', color: '#0B1F33', fontWeight: 700, fontSize: 16 }}
         >
           勝ち
         </button>
         <button
-          onClick={() => recordResult(false)}
+          onClick={() => recordResult(false, null)}
           style={{ flex: 1, padding: '16px 0', borderRadius: 10, border: 'none', background: 'var(--loss)', color: '#F5EAE8', fontWeight: 700, fontSize: 16 }}
         >
           負け
@@ -361,6 +338,73 @@ export default function Home() {
       </div>
 
       {saving && <div style={{ textAlign: 'center', fontSize: 10, color: 'var(--text-muted)' }}>保存中…</div>}
+
+      {/* 払戻オッズ入力モーダル（勝ち押下時） */}
+      {winModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+            padding: 20
+          }}
+          onClick={() => setWinModalOpen(false)}
+        >
+          <div
+            className="card"
+            style={{ width: '100%', maxWidth: 340, margin: 0 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4, textAlign: 'center' }}>払戻オッズを入力</div>
+            <div style={{ fontSize: 10.5, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 14 }}>
+              {venue} {race}R ・ 賭け目 {combo || '-'}
+            </div>
+            <input
+              type="number"
+              step="0.1"
+              autoFocus
+              value={winOdds}
+              onChange={(e) => setWinOdds(e.target.value)}
+              placeholder="例: 3.5"
+              style={{
+                width: '100%',
+                padding: '14px 12px',
+                fontSize: 20,
+                textAlign: 'center',
+                borderRadius: 8,
+                border: '1px solid var(--border)',
+                background: 'var(--panel-2)',
+                color: 'var(--text)',
+                marginBottom: 8
+              }}
+            />
+            {winOddsWarn && (
+              <div style={{ fontSize: 11, color: 'var(--loss)', textAlign: 'center', marginBottom: 8 }}>
+                推奨オッズ({settings.minOdds}倍)未満です
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <button
+                onClick={() => setWinModalOpen(false)}
+                style={{ flex: 1, padding: '12px 0', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 13 }}
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={confirmWin}
+                disabled={!winOdds || parseFloat(winOdds) <= 0}
+                style={{ flex: 1, padding: '12px 0', borderRadius: 8, border: 'none', background: 'var(--win)', color: '#0B1F33', fontWeight: 700, fontSize: 13 }}
+              >
+                確定
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
