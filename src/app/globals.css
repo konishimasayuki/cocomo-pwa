@@ -1,0 +1,69 @@
+:root {
+  --bg: #0B1F33;
+  --panel: #102A42;
+  --panel-2: #0D2438;
+  --border: #1F3F59;
+  --text: #EDEAE3;
+  --text-muted: #7C93A6;
+  --accent: #E8A33D;
+  --win: #3FA796;
+  --loss: #D1554A;
+  --lane1: #F1EFEA;
+  --lane2: #8C8C8C;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  padding: 0;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", Meiryo, -apple-system, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input, select, button {
+  font-family: inherit;
+}
+
+.mono {
+  font-family: ui-monospace, "SF Mono", "Roboto Mono", monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 18px 16px calc(96px + env(safe-area-inset-bottom));
+  min-height: 100vh;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.field-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+.field-row:last-child { margin-bottom: 0; }
+.field-row input, .field-row select {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 7px 9px;
+  font-size: 13px;
+  text-align: right;
+  width: 130px;
+}
+
+h1, h2, h3 { margin: 0; }
