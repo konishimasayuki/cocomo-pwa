@@ -1,5 +1,5 @@
 const CACHE_NAME = 'cocomo-shell-v1';
-const SHELL_URLS = ['/', '/history', '/rates', '/settings', '/manifest.json'];
+const SHELL_URLS = ['/', '/history', '/settings', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

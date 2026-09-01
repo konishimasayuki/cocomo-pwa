@@ -43,7 +43,7 @@ export function defaultSlotState(): SlotState {
 }
 
 export function defaultSettings(): Settings {
-  return { baseUnitA: 1000, baseUnitB: 1000, minOdds: 2.7, activeSlot: 'A', initialCapital: 0 };
+  return { baseUnitA: 100, baseUnitB: 200, minOdds: 2.7, activeSlot: 'A', initialCapital: 0 };
 }
 
 // ココモ法の数列（1,1,2,3,5,8...）を先頭からn項分返す（資金シミュレーション表示用）
