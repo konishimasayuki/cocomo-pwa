@@ -202,7 +202,7 @@ export default function HistoryPage() {
             key={h.id}
             style={{
               display: 'grid',
-              gridTemplateColumns: '58px 40px 1fr 60px 44px 74px',
+              gridTemplateColumns: '58px 40px 1fr 44px 60px 44px 74px',
               gap: 6,
               fontSize: 11.5,
               padding: '10px 14px',
@@ -215,6 +215,7 @@ export default function HistoryPage() {
             <div style={{ color: 'var(--text-muted)' }}>
               {h.venue} {h.race}R ・{h.slot}
             </div>
+            <div className="mono" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{h.combo || '-'}</div>
             <div className="mono" style={{ textAlign: 'right' }}>{fmt(h.bet)}</div>
             <div style={{ textAlign: 'center', fontWeight: 700, color: h.won ? 'var(--win)' : 'var(--loss)' }}>
               {h.won ? '勝ち' : '負け'}

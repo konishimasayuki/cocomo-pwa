@@ -21,6 +21,7 @@ export type HistoryEntry = {
   venue: string;
   race: number;
   slot: 'A' | 'B';
+  combo: string;  // 賭け目（例: "1-2"）
   bet: number;
   odds: number | null;
   won: boolean;

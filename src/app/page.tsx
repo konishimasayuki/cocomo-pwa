@@ -33,6 +33,7 @@ export default function Home() {
   const [date, setDate] = useState(todayStr());
   const [venue, setVenue] = useState(VENUES[0]);
   const [race, setRace] = useState(1);
+  const [combo, setCombo] = useState('1-2');
   const [odds, setOdds] = useState('2.7');
   const [saving, setSaving] = useState(false);
 
@@ -145,6 +146,7 @@ export default function Home() {
       venue,
       race,
       slot: activeSlot,
+      combo: combo.trim() || '-',
       bet,
       odds: oddsNum,
       won,
@@ -269,6 +271,10 @@ export default function Home() {
 
       <div className="card">
         <div className="field-row">
+          <span>賭け目（例: 1-2）</span>
+          <input type="text" value={combo} onChange={(e) => setCombo(e.target.value)} placeholder="1-2" style={{ textAlign: 'right' }} />
+        </div>
+        <div className="field-row">
           <span>払戻オッズ（勝った場合）</span>
           <input type="number" step="0.1" value={odds} onChange={(e) => setOdds(e.target.value)} />
         </div>
@@ -296,7 +302,10 @@ export default function Home() {
                 .map(([combo, v]) => (
                   <button
                     key={combo}
-                    onClick={() => setOdds(String(v))}
+                    onClick={() => {
+                      setOdds(String(v));
+                      setCombo(combo);
+                    }}
                     style={{
                       padding: '6px 2px',
                       borderRadius: 6,
