@@ -96,9 +96,11 @@ export default function SettingsPage() {
     let cumA = 0;
     let cumB = 0;
     return seq.map((units, i) => {
-      cumA += units * settings.baseUnitA;
-      cumB += units * settings.baseUnitB;
-      return { n: i + 1, cumA, cumB };
+      const betA = units * settings.baseUnitA;
+      const betB = units * settings.baseUnitB;
+      cumA += betA;
+      cumB += betB;
+      return { n: i + 1, betA, betB, cumA, cumB };
     });
   }, [settings.baseUnitA, settings.baseUnitB]);
 
@@ -152,27 +154,33 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="card">
+      <div className="card" style={{ overflowX: 'auto' }}>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
-          15連敗までの資金の流れ（いくら用意すべきかの目安）
+          15連敗までの資金の流れ（いくら用意すべきか・その回にいくら賭けるか）
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '52px 1fr 1fr', gap: 4, fontSize: 11, color: 'var(--text-muted)', paddingBottom: 6, borderBottom: '1px solid var(--border)' }}>
-          <div>連敗</div>
-          <div style={{ textAlign: 'right' }}>ベットA累計</div>
-          <div style={{ textAlign: 'right' }}>ベットB累計</div>
-        </div>
-        {simRows.map((r) => (
-          <div
-            key={r.n}
-            style={{ display: 'grid', gridTemplateColumns: '52px 1fr 1fr', gap: 4, fontSize: 12, padding: '6px 0', borderBottom: '1px solid var(--border)' }}
-          >
-            <div style={{ color: 'var(--text-muted)' }}>{r.n}回目</div>
-            <div className="mono" style={{ textAlign: 'right' }}>{fmt(r.cumA)}</div>
-            <div className="mono" style={{ textAlign: 'right' }}>{fmt(r.cumB)}</div>
+        <div style={{ minWidth: 400 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '48px 1fr 1fr 1fr 1fr', gap: 4, fontSize: 10.5, color: 'var(--text-muted)', paddingBottom: 6, borderBottom: '1px solid var(--border)' }}>
+            <div>連敗</div>
+            <div style={{ textAlign: 'right' }}>Aベット額</div>
+            <div style={{ textAlign: 'right' }}>A累計</div>
+            <div style={{ textAlign: 'right' }}>Bベット額</div>
+            <div style={{ textAlign: 'right' }}>B累計</div>
           </div>
-        ))}
+          {simRows.map((r) => (
+            <div
+              key={r.n}
+              style={{ display: 'grid', gridTemplateColumns: '48px 1fr 1fr 1fr 1fr', gap: 4, fontSize: 12, padding: '6px 0', borderBottom: '1px solid var(--border)' }}
+            >
+              <div style={{ color: 'var(--text-muted)' }}>{r.n}回目</div>
+              <div className="mono" style={{ textAlign: 'right' }}>{fmt(r.betA)}</div>
+              <div className="mono" style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{fmt(r.cumA)}</div>
+              <div className="mono" style={{ textAlign: 'right' }}>{fmt(r.betB)}</div>
+              <div className="mono" style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{fmt(r.cumB)}</div>
+            </div>
+          ))}
+        </div>
         <div style={{ fontSize: 10.5, color: 'var(--text-muted)', lineHeight: 1.6, marginTop: 10 }}>
-          「n回目」はn連敗した時点でそのベットに賭ける金額の累計です。この金額まで負け続けても賭け続けられる資金を用意しておくと安心です。
+          「n回目」はn連敗した時点でのそのベットの金額(ベット額)と、そこまでの投入合計(累計)です。例えば13回目ならその時点で賭ける金額が「Aベット額」の列で分かります。
         </div>
       </div>
 
