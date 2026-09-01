@@ -8,6 +8,11 @@ function fmt(n: number) {
   return sign + '¥' + Math.abs(Math.round(n)).toLocaleString('ja-JP');
 }
 
+function fmtTime(ts: number) {
+  const d = new Date(ts);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
 function todayStr() {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -146,7 +151,7 @@ export default function HistoryPage() {
               key={f.id}
               style={{
                 display: 'grid',
-                gridTemplateColumns: '58px 1fr 90px',
+                gridTemplateColumns: '58px 40px 1fr 90px',
                 gap: 6,
                 fontSize: 11.5,
                 padding: '9px 14px',
@@ -155,6 +160,7 @@ export default function HistoryPage() {
               }}
             >
               <div style={{ color: 'var(--text-muted)' }}>{f.date.slice(5)}</div>
+              <div className="mono" style={{ color: 'var(--text-muted)' }}>{fmtTime(f.ts)}</div>
               <div style={{ color: 'var(--text-muted)' }}>{f.note || (f.amount >= 0 ? '資金追加' : '引き出し')}</div>
               <div className="mono" style={{ textAlign: 'right', color: f.amount >= 0 ? 'var(--win)' : 'var(--loss)' }}>
                 {fmt(f.amount)}
@@ -196,7 +202,7 @@ export default function HistoryPage() {
             key={h.id}
             style={{
               display: 'grid',
-              gridTemplateColumns: '58px 1fr 60px 44px 74px',
+              gridTemplateColumns: '58px 40px 1fr 60px 44px 74px',
               gap: 6,
               fontSize: 11.5,
               padding: '10px 14px',
@@ -205,6 +211,7 @@ export default function HistoryPage() {
             }}
           >
             <div style={{ color: 'var(--text-muted)' }}>{h.date.slice(5)}</div>
+            <div className="mono" style={{ color: 'var(--text-muted)' }}>{fmtTime(h.ts)}</div>
             <div style={{ color: 'var(--text-muted)' }}>
               {h.venue} {h.race}R ・{h.slot}
             </div>
