@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { VENUES } from '@/lib/venues';
+import { VENUES, venueCode } from '@/lib/venues';
 import {
   Settings,
   SlotState,
@@ -35,6 +35,10 @@ export default function Home() {
   const [race, setRace] = useState(1);
   const [odds, setOdds] = useState('2.7');
   const [saving, setSaving] = useState(false);
+
+  const [oddsGrid, setOddsGrid] = useState<Record<string, number> | null>(null);
+  const [oddsLoading, setOddsLoading] = useState(false);
+  const [oddsError, setOddsError] = useState('');
 
   useEffect(() => {
     fetch('/api/state')
@@ -104,6 +108,27 @@ export default function Home() {
   }
 
   const oddsWarn = odds !== '' && parseFloat(odds) < settings.minOdds;
+
+  async function fetchOdds() {
+    setOddsLoading(true);
+    setOddsError('');
+    setOddsGrid(null);
+    try {
+      const hd = date.replace(/-/g, '');
+      const jcd = venueCode(venue);
+      const res = await fetch(`/api/odds?jcd=${jcd}&hd=${hd}&rno=${race}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setOddsError(data.error || 'オッズを取得できませんでした');
+      } else {
+        setOddsGrid(data.combos);
+      }
+    } catch {
+      setOddsError('通信エラーが発生しました');
+    } finally {
+      setOddsLoading(false);
+    }
+  }
 
   if (loading) {
     return <div className="page" style={{ textAlign: 'center', paddingTop: 40, color: 'var(--text-muted)' }}>読み込み中…</div>;
@@ -185,6 +210,42 @@ export default function Home() {
         {oddsWarn && (
           <div style={{ fontSize: 11, color: 'var(--loss)', marginTop: 6, textAlign: 'right' }}>
             推奨オッズ({settings.minOdds}倍)未満です
+          </div>
+        )}
+        <button
+          onClick={fetchOdds}
+          disabled={oddsLoading}
+          style={{ width: '100%', marginTop: 10, padding: '9px 0', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 12 }}
+        >
+          {oddsLoading ? '取得中…' : `${venue} ${race}R の2連単オッズを取得`}
+        </button>
+        {oddsError && <div style={{ fontSize: 11, color: 'var(--loss)', marginTop: 8, textAlign: 'center' }}>{oddsError}</div>}
+        {oddsGrid && (
+          <div style={{ marginTop: 10 }}>
+            <div style={{ fontSize: 10.5, color: 'var(--text-muted)', marginBottom: 6, textAlign: 'center' }}>
+              タップすると上のオッズ欄に反映されます
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
+              {Object.entries(oddsGrid)
+                .sort((a, b) => a[1] - b[1])
+                .map(([combo, v]) => (
+                  <button
+                    key={combo}
+                    onClick={() => setOdds(String(v))}
+                    style={{
+                      padding: '6px 2px',
+                      borderRadius: 6,
+                      border: '1px solid var(--border)',
+                      background: 'var(--panel-2)',
+                      color: 'var(--text)',
+                      fontSize: 10.5
+                    }}
+                  >
+                    <div className="mono" style={{ color: 'var(--text-muted)' }}>{combo}</div>
+                    <div className="mono" style={{ fontWeight: 600 }}>{v}</div>
+                  </button>
+                ))}
+            </div>
           </div>
         )}
       </div>

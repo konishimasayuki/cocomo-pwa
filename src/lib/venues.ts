@@ -4,3 +4,9 @@ export const VENUES = [
   '尼崎', '鳴門', '丸亀', '児島', '宮島', '徳山',
   '下関', '若松', '芦屋', '福岡', '唐津', '大村'
 ];
+
+// 公式サイトのjcdパラメータ（VENUESと同じ並び順、1始まり=01〜24）
+export function venueCode(venue: string): string {
+  const i = VENUES.indexOf(venue);
+  return String(i + 1).padStart(2, '0');
+}
