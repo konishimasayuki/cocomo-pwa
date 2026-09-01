@@ -62,7 +62,6 @@ export default function LoginPage() {
               <path d="M11 15V9.5l4.5 3.2c.6.4.4 1.3-.3 1.3H11Z" />
             </svg>
           </div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>ココモ法 資金管理</div>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>パスワードを入力してください</div>
         </div>
 
