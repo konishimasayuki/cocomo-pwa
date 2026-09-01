@@ -18,3 +18,13 @@ export async function sha256Hex(input: string): Promise<string> {
 }
 
 export const AUTH_COOKIE = 'cocomo_auth';
+
+// 危険な操作（リセット・削除）の確認用パスワード。ログイン用とは別。
+// コードには平文を置かず、ハッシュだけを保持する。
+const ACTION_PASSWORD_HASH = '3ed23197a0865b6d7eaec04eff603145ce6b09e9d4af8a438cc416cdbf9b7b95';
+
+export async function verifyActionPassword(input: string): Promise<boolean> {
+  if (!input) return false;
+  const hash = await sha256Hex(input);
+  return hash === ACTION_PASSWORD_HASH;
+}

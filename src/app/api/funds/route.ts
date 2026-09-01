@@ -16,3 +16,18 @@ export async function POST(req: NextRequest) {
   await redis.ltrim(KEYS.funds, 0, 499);
   return NextResponse.json({ ok: true });
 }
+
+export async function DELETE(req: NextRequest) {
+  const id = req.nextUrl.searchParams.get('id');
+  if (!id) return NextResponse.json({ error: 'id は必須です' }, { status: 400 });
+
+  const all = await redis.lrange<FundEntry>(KEYS.funds, 0, -1);
+  const remaining = all.filter((e) => e.id !== id);
+
+  await redis.del(KEYS.funds);
+  if (remaining.length > 0) {
+    await redis.rpush(KEYS.funds, ...remaining);
+  }
+
+  return NextResponse.json({ ok: true });
+}

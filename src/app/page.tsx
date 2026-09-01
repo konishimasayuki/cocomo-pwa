@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { SPORT_VENUES, SportType, venueCode } from '@/lib/venues';
+import { SPORT_VENUES, SportType } from '@/lib/venues';
 import {
   Settings,
   SlotState,
@@ -41,8 +41,6 @@ export default function Home() {
 
   const [activeVenues, setActiveVenues] = useState<{ code: string; name: string }[]>([]);
   const [venuesLoading, setVenuesLoading] = useState(false);
-  const [raceTimes, setRaceTimes] = useState<{ race: number; deadline: string | null }[]>([]);
-  const [racesLoading, setRacesLoading] = useState(false);
 
   const [winModalOpen, setWinModalOpen] = useState(false);
   const [winOdds, setWinOdds] = useState('');
@@ -73,41 +71,8 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, sport]);
 
-  // 競艇のみ: 会場か日付が変わったら、その会場の各レース締切時刻を取得
-  useEffect(() => {
-    if (sport !== '競艇') {
-      setRaceTimes([]);
-      return;
-    }
-    const hd = date.replace(/-/g, '');
-    const jcd = venueCode(venue);
-    setRacesLoading(true);
-    fetch(`/api/racetimes?jcd=${jcd}&hd=${hd}`)
-      .then((r) => r.json())
-      .then((d) => setRaceTimes(d.races ?? []))
-      .catch(() => setRaceTimes([]))
-      .finally(() => setRacesLoading(false));
-  }, [date, venue, sport]);
-
-  const isToday = date === todayStr();
-  const nowHM = useMemo(() => {
-    const d = new Date();
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-  }, []);
-
-  const availableRaces = useMemo(() => {
-    if (sport !== '競艇' || raceTimes.length === 0) return Array.from({ length: 12 }, (_, i) => i + 1);
-    return raceTimes
-      .filter((r) => !isToday || !r.deadline || r.deadline >= nowHM)
-      .map((r) => r.race);
-  }, [raceTimes, isToday, nowHM, sport]);
-
-  useEffect(() => {
-    if (availableRaces.length > 0 && !availableRaces.includes(race)) {
-      setRace(availableRaces[0]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [availableRaces]);
+  // レースは常に1〜12Rを表示（締切時刻での絞り込みは重いため撤去）
+  const availableRaces = useMemo(() => Array.from({ length: 12 }, (_, i) => i + 1), []);
 
   useEffect(() => {
     fetch('/api/state')
@@ -283,18 +248,14 @@ export default function Home() {
           </div>
         )}
         <div className="field-row">
-          <span>レース{racesLoading ? '（更新中…）' : ''}</span>
+          <span>レース</span>
           <select value={race} onChange={(e) => setRace(Number(e.target.value))}>
             {availableRaces.map((r) => (
               <option key={r} value={r}>{r}R</option>
             ))}
           </select>
         </div>
-        {sport === '競艇' && isToday && availableRaces.length === 0 && !racesLoading && (
-          <div style={{ fontSize: 10.5, color: 'var(--text-muted)', textAlign: 'right', marginTop: -6 }}>
-            本日はこの後の発売中レースがありません
-          </div>
-        )}
+
         <div style={{ marginTop: 4 }}>
           <div style={{ fontSize: 13, marginBottom: 6 }}>賭け目（例: 1-2）</div>
           {combos.map((c, i) => (

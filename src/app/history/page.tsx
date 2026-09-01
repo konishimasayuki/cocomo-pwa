@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { HistoryEntry, FundEntry, Settings, SlotState, defaultSettings, defaultSlotState } from '@/lib/cocomo';
+import PasswordConfirmModal from '@/components/PasswordConfirmModal';
 
 function fmt(n: number) {
   const sign = n < 0 ? '-' : '';
@@ -19,6 +20,8 @@ function todayStr() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+const COLS = '78px 150px 90px 64px 50px 44px 78px 78px 36px';
+
 export default function HistoryPage() {
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [funds, setFunds] = useState<FundEntry[]>([]);
@@ -32,6 +35,8 @@ export default function HistoryPage() {
   const [fundAmount, setFundAmount] = useState('');
   const [fundNote, setFundNote] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const [deleteTarget, setDeleteTarget] = useState<null | { type: 'history' | 'fund'; id: string }>(null);
 
   async function loadAll() {
     const [h, f, s] = await Promise.all([
@@ -77,6 +82,14 @@ export default function HistoryPage() {
     setFundNote('');
     setShowAddFund(false);
     setSaving(false);
+    loadAll();
+  }
+
+  async function doDelete() {
+    if (!deleteTarget) return;
+    const path = deleteTarget.type === 'history' ? '/api/history' : '/api/funds';
+    await fetch(`${path}?id=${deleteTarget.id}`, { method: 'DELETE' }).catch(() => {});
+    setDeleteTarget(null);
     loadAll();
   }
 
@@ -168,6 +181,12 @@ export default function HistoryPage() {
               <span className="mono" style={{ flexShrink: 0, color: f.amount >= 0 ? 'var(--win)' : 'var(--loss)' }}>
                 {fmt(f.amount)}
               </span>
+              <button
+                onClick={() => setDeleteTarget({ type: 'fund', id: f.id })}
+                style={{ flexShrink: 0, width: 26, height: 26, borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 13 }}
+              >
+                ×
+              </button>
             </div>
           ))}
         </div>
@@ -200,43 +219,79 @@ export default function HistoryPage() {
       )}
 
       {shown.length > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 14px 6px', fontSize: 10.5, color: 'var(--text-muted)' }}>
-          <span>日時・内容</span>
-          <span>結果・収支</span>
+        <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
+          <div style={{ minWidth: 750 }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: COLS,
+                gap: 4,
+                fontSize: 10,
+                color: 'var(--text-muted)',
+                padding: '8px 10px',
+                borderBottom: '1px solid var(--border)'
+              }}
+            >
+              <div>日時</div>
+              <div>内容</div>
+              <div>賭け目</div>
+              <div style={{ textAlign: 'right' }}>ベット額</div>
+              <div style={{ textAlign: 'right' }}>オッズ</div>
+              <div style={{ textAlign: 'center' }}>結果</div>
+              <div style={{ textAlign: 'right' }}>当選金額</div>
+              <div style={{ textAlign: 'right' }}>累計収支</div>
+              <div></div>
+            </div>
+            {shown.map((h, i) => {
+              const payout = h.won && h.odds ? h.bet * h.odds : null;
+              return (
+                <div
+                  key={h.id}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: COLS,
+                    gap: 4,
+                    fontSize: 11,
+                    padding: '9px 10px',
+                    borderBottom: i === shown.length - 1 ? 'none' : '1px solid var(--border)',
+                    alignItems: 'center'
+                  }}
+                >
+                  <div className="mono" style={{ color: 'var(--text-muted)', fontSize: 10.5 }}>
+                    {h.date.slice(5)} {fmtTime(h.ts)}
+                  </div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: 10.5 }}>
+                    {h.sport ? `[${h.sport}] ` : ''}{h.venue} {h.race}R・{h.slot}
+                  </div>
+                  <div className="mono" style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>
+                    {Array.isArray(h.combo) ? h.combo.join(',') : h.combo || '-'}
+                  </div>
+                  <div className="mono" style={{ textAlign: 'right' }}>{fmt(h.bet)}</div>
+                  <div className="mono" style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{h.odds ?? '-'}</div>
+                  <div style={{ textAlign: 'center', fontWeight: 700, color: h.won ? 'var(--win)' : 'var(--loss)' }}>
+                    {h.won ? '勝ち' : '負け'}
+                  </div>
+                  <div className="mono" style={{ textAlign: 'right', color: 'var(--win)' }}>{payout ? fmt(payout) : '-'}</div>
+                  <div className="mono" style={{ textAlign: 'right', fontWeight: 600 }}>{fmt(h.running)}</div>
+                  <button
+                    onClick={() => setDeleteTarget({ type: 'history', id: h.id })}
+                    style={{ width: 26, height: 26, borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 13, justifySelf: 'center' }}
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
-      <div className="card" style={{ padding: 0 }}>
-        {shown.map((h, i) => (
-          <div
-            key={h.id}
-            style={{
-              padding: '10px 14px',
-              borderBottom: i === shown.length - 1 ? 'none' : '1px solid var(--border)'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, gap: 8 }}>
-              <span className="mono" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                {h.date.slice(5)} {fmtTime(h.ts)}
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 11.5, fontWeight: 700, color: h.won ? 'var(--win)' : 'var(--loss)' }}>
-                  {h.won ? '勝ち' : '負け'}
-                </span>
-                <span className="mono" style={{ fontSize: 12.5, fontWeight: 600 }}>{fmt(h.running)}</span>
-              </span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, fontSize: 11, color: 'var(--text-muted)' }}>
-              <span style={{ minWidth: 0, overflowWrap: 'break-word' }}>
-                {h.sport ? `[${h.sport}] ` : ''}{h.venue} {h.race}R・{h.slot}
-                {' '}
-                <span className="mono">{Array.isArray(h.combo) ? h.combo.join(',') : h.combo || '-'}</span>
-              </span>
-              <span className="mono" style={{ flexShrink: 0 }}>{fmt(h.bet)}</span>
-            </div>
-          </div>
-        ))}
-      </div>
+      <PasswordConfirmModal
+        open={!!deleteTarget}
+        title="この記録を削除します"
+        onCancel={() => setDeleteTarget(null)}
+        onSuccess={doDelete}
+      />
     </div>
   );
 }

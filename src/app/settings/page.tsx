@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Settings, defaultSettings, cocomoSequence } from '@/lib/cocomo';
+import PasswordConfirmModal from '@/components/PasswordConfirmModal';
 
 function fmt(n: number) {
   const sign = n < 0 ? '-' : '';
@@ -14,6 +15,7 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings>(defaultSettings());
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState('');
+  const [confirmAction, setConfirmAction] = useState<null | { title: string; run: () => void }>(null);
 
   async function logout() {
     await fetch('/api/login', { method: 'DELETE' });
@@ -36,17 +38,25 @@ export default function SettingsPage() {
     }).catch(() => {});
   }
 
-  async function resetSlot(slot: 'A' | 'B') {
-    if (!confirm(`ベット${slot}の数列・収支をリセットします。よろしいですか？`)) return;
-    await fetch(`/api/state?slot=${slot}`, { method: 'DELETE' });
-    setMsg(`ベット${slot}をリセットしました`);
+  function requestResetSlot(slot: 'A' | 'B') {
+    setConfirmAction({
+      title: `ベット${slot}の数列・収支をリセットします`,
+      run: async () => {
+        await fetch(`/api/state?slot=${slot}`, { method: 'DELETE' });
+        setMsg(`ベット${slot}をリセットしました`);
+      }
+    });
   }
 
-  async function resetAll() {
-    if (!confirm('設定・収支・履歴をすべてリセットします。よろしいですか？')) return;
-    await fetch('/api/state', { method: 'DELETE' });
-    setSettings(defaultSettings());
-    setMsg('全体をリセットしました');
+  function requestResetAll() {
+    setConfirmAction({
+      title: '設定・収支・履歴をすべてリセットします',
+      run: async () => {
+        await fetch('/api/state', { method: 'DELETE' });
+        setSettings(defaultSettings());
+        setMsg('全体をリセットしました');
+      }
+    });
   }
 
   const simRows = useMemo(() => {
@@ -133,10 +143,10 @@ export default function SettingsPage() {
       <div className="card">
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>リセット</div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-          <button onClick={() => resetSlot('A')} style={resetBtnStyle}>ベットAのみ</button>
-          <button onClick={() => resetSlot('B')} style={resetBtnStyle}>ベットBのみ</button>
+          <button onClick={() => requestResetSlot('A')} style={resetBtnStyle}>ベットAのみ</button>
+          <button onClick={() => requestResetSlot('B')} style={resetBtnStyle}>ベットBのみ</button>
         </div>
-        <button onClick={resetAll} style={{ ...resetBtnStyle, width: '100%', color: 'var(--loss)' }}>
+        <button onClick={requestResetAll} style={{ ...resetBtnStyle, width: '100%', color: 'var(--loss)' }}>
           全体をリセット（履歴も削除）
         </button>
       </div>
@@ -150,6 +160,16 @@ export default function SettingsPage() {
       <div style={{ fontSize: 10.5, color: 'var(--text-muted)', lineHeight: 1.6, marginTop: 16 }}>
         ※ ココモ法は配当3倍前後のベットを想定した投資法です。推奨最低オッズはあくまで目安なので、実際の運用ルールに合わせて調整してください。
       </div>
+
+      <PasswordConfirmModal
+        open={!!confirmAction}
+        title={confirmAction?.title ?? ''}
+        onCancel={() => setConfirmAction(null)}
+        onSuccess={() => {
+          confirmAction?.run();
+          setConfirmAction(null);
+        }}
+      />
     </div>
   );
 }
