@@ -17,6 +17,14 @@ export default function SettingsPage() {
   const [msg, setMsg] = useState('');
   const [confirmAction, setConfirmAction] = useState<null | { title: string; run: () => void }>(null);
 
+  // 数値入力はキー入力のたびに保存すると通信の順序次第で古い値が勝ってしまう
+  // （例: 10000と打っている途中の1000が後から上書きしてしまう）ため、
+  // ローカルで文字列として保持し、フォーカスが外れた時だけ保存する
+  const [baseUnitAInput, setBaseUnitAInput] = useState('');
+  const [baseUnitBInput, setBaseUnitBInput] = useState('');
+  const [minOddsInput, setMinOddsInput] = useState('');
+  const [initialCapitalInput, setInitialCapitalInput] = useState('');
+
   async function logout() {
     await fetch('/api/login', { method: 'DELETE' });
     router.push('/login');
@@ -25,7 +33,13 @@ export default function SettingsPage() {
   useEffect(() => {
     fetch('/api/state')
       .then((r) => r.json())
-      .then((d) => setSettings(d.settings))
+      .then((d) => {
+        setSettings(d.settings);
+        setBaseUnitAInput(String(d.settings.baseUnitA));
+        setBaseUnitBInput(String(d.settings.baseUnitB));
+        setMinOddsInput(String(d.settings.minOdds));
+        setInitialCapitalInput(String(d.settings.initialCapital));
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -36,6 +50,24 @@ export default function SettingsPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ settings: next })
     }).catch(() => {});
+  }
+
+  function commitBaseUnitA() {
+    save({ ...settings, baseUnitA: Number(baseUnitAInput) || 0 });
+  }
+  function commitBaseUnitB() {
+    save({ ...settings, baseUnitB: Number(baseUnitBInput) || 0 });
+  }
+  function commitMinOdds() {
+    save({ ...settings, minOdds: Number(minOddsInput) || 0 });
+  }
+  function commitInitialCapital() {
+    const value = Number(initialCapitalInput) || 0;
+    if (value === settings.initialCapital) return;
+    setConfirmAction({
+      title: `開始資金を ${value.toLocaleString('ja-JP')}円 に変更します`,
+      run: () => save({ ...settings, initialCapital: value })
+    });
   }
 
   function requestResetSlot(slot: 'A' | 'B') {
@@ -85,16 +117,18 @@ export default function SettingsPage() {
           <span>基本ベット単位（ベットA）</span>
           <input
             type="number"
-            value={settings.baseUnitA}
-            onChange={(e) => save({ ...settings, baseUnitA: Number(e.target.value) || 0 })}
+            value={baseUnitAInput}
+            onChange={(e) => setBaseUnitAInput(e.target.value)}
+            onBlur={commitBaseUnitA}
           />
         </div>
         <div className="field-row">
           <span>基本ベット単位（ベットB）</span>
           <input
             type="number"
-            value={settings.baseUnitB}
-            onChange={(e) => save({ ...settings, baseUnitB: Number(e.target.value) || 0 })}
+            value={baseUnitBInput}
+            onChange={(e) => setBaseUnitBInput(e.target.value)}
+            onBlur={commitBaseUnitB}
           />
         </div>
         <div className="field-row">
@@ -102,16 +136,18 @@ export default function SettingsPage() {
           <input
             type="number"
             step="0.1"
-            value={settings.minOdds}
-            onChange={(e) => save({ ...settings, minOdds: Number(e.target.value) || 0 })}
+            value={minOddsInput}
+            onChange={(e) => setMinOddsInput(e.target.value)}
+            onBlur={commitMinOdds}
           />
         </div>
         <div className="field-row">
-          <span>開始資金</span>
+          <span>開始資金（変更には確認あり）</span>
           <input
             type="number"
-            value={settings.initialCapital}
-            onChange={(e) => save({ ...settings, initialCapital: Number(e.target.value) || 0 })}
+            value={initialCapitalInput}
+            onChange={(e) => setInitialCapitalInput(e.target.value)}
+            onBlur={commitInitialCapital}
           />
         </div>
       </div>

@@ -36,6 +36,8 @@ export default function HistoryPage() {
   const [fundNote, setFundNote] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const [fundError, setFundError] = useState('');
+
   const [deleteTarget, setDeleteTarget] = useState<null | { type: 'history' | 'fund'; id: string }>(null);
 
   async function loadAll() {
@@ -64,7 +66,11 @@ export default function HistoryPage() {
 
   async function submitFund() {
     const amount = Number(fundAmount);
-    if (!amount) return;
+    if (!amount) {
+      setFundError('金額を入力してください');
+      return;
+    }
+    setFundError('');
     setSaving(true);
     const entry: FundEntry = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -73,16 +79,27 @@ export default function HistoryPage() {
       amount,
       note: fundNote
     };
-    await fetch('/api/funds', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(entry)
-    }).catch(() => {});
-    setFundAmount('');
-    setFundNote('');
-    setShowAddFund(false);
-    setSaving(false);
-    loadAll();
+    try {
+      const res = await fetch('/api/funds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(entry)
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setFundError(data.error || '保存に失敗しました');
+        setSaving(false);
+        return;
+      }
+      setFundAmount('');
+      setFundNote('');
+      setShowAddFund(false);
+      await loadAll();
+    } catch {
+      setFundError('通信エラーが発生しました');
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function doDelete() {
@@ -143,23 +160,27 @@ export default function HistoryPage() {
                 disabled={saving}
                 style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#0B1F33', fontWeight: 700, fontSize: 12.5 }}
               >
-                登録
+                {saving ? '登録中…' : '登録'}
               </button>
               <button
-                onClick={() => setShowAddFund(false)}
+                onClick={() => { setShowAddFund(false); setFundError(''); }}
                 style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 12.5 }}
               >
                 キャンセル
               </button>
             </div>
+            {fundError && <div style={{ fontSize: 11, color: 'var(--loss)', textAlign: 'center', marginTop: 8 }}>{fundError}</div>}
           </div>
         )}
       </div>
 
       {/* 入出金履歴 */}
-      {funds.length > 0 && (
-        <div className="card" style={{ padding: 0 }}>
-          {funds.map((f, i) => (
+      <div style={{ fontSize: 12, color: 'var(--text-muted)', margin: '4px 0 8px' }}>入出金履歴</div>
+      <div className="card" style={{ padding: 0 }}>
+        {funds.length === 0 ? (
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>まだ記録がありません</div>
+        ) : (
+          funds.map((f, i) => (
             <div
               key={f.id}
               style={{
@@ -188,9 +209,9 @@ export default function HistoryPage() {
                 ×
               </button>
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
 
       {/* ベット履歴フィルタ */}
       <div style={{ display: 'flex', gap: 8, margin: '18px 0 14px' }}>

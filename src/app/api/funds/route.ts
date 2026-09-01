@@ -11,10 +11,17 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const entry = (await req.json()) as FundEntry;
-  await redis.lpush(KEYS.funds, entry);
-  await redis.ltrim(KEYS.funds, 0, 499);
-  return NextResponse.json({ ok: true });
+  try {
+    const entry = (await req.json()) as FundEntry;
+    if (!entry || typeof entry.amount !== 'number' || !entry.id) {
+      return NextResponse.json({ error: '不正なデータです' }, { status: 400 });
+    }
+    await redis.lpush(KEYS.funds, entry);
+    await redis.ltrim(KEYS.funds, 0, 499);
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return NextResponse.json({ error: '保存に失敗しました' }, { status: 500 });
+  }
 }
 
 export async function DELETE(req: NextRequest) {
