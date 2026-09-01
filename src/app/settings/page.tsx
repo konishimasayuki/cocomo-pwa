@@ -201,10 +201,6 @@ export default function SettingsPage() {
 
       {msg && <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>{msg}</div>}
 
-      <div style={{ fontSize: 10.5, color: 'var(--text-muted)', lineHeight: 1.6, marginTop: 16 }}>
-        ※ ココモ法は配当3倍前後のベットを想定した投資法です。推奨最低オッズはあくまで目安なので、実際の運用ルールに合わせて調整してください。
-      </div>
-
       <PasswordConfirmModal
         open={!!confirmAction}
         title={confirmAction?.title ?? ''}

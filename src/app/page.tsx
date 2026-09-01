@@ -187,7 +187,7 @@ export default function Home() {
   return (
     <div className="page">
       <header style={{ marginBottom: 14 }}>
-        <h1 style={{ fontSize: 15, fontWeight: 600 }}>ココモ法 資金管理</h1>
+        <h1 style={{ fontSize: 15, fontWeight: 600 }}>資金管理</h1>
         <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>推奨オッズ {settings.minOdds}倍以上</div>
       </header>
 
@@ -310,15 +310,14 @@ export default function Home() {
       {/* トートボード風表示 */}
       <div className="card" style={{ textAlign: 'center', padding: '22px 16px 16px' }}>
         <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>次のベット額（理論値・ベット{activeSlot}）</div>
-        <div className="mono" style={{ fontSize: 42, fontWeight: 700, color: 'var(--accent)', margin: '4px 0' }}>
-          {fmt(nextBet)}
-        </div>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-          {state.step + 1}投目 / 数列 [{state.sequence.slice(0, state.step + 1).join(', ')}
-          {state.step >= state.sequence.length ? '…' : ''}]
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 10, margin: '4px 0' }}>
+          <span className="mono" style={{ fontSize: 16, color: 'var(--text-muted)' }}>{state.step + 1}戦目</span>
+          <span className="mono" style={{ fontSize: 42, fontWeight: 700, color: 'var(--accent)' }}>
+            {fmt(nextBet)}
+          </span>
         </div>
         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-          今サイクルの投入累計: {fmt(invested + nextBet)}
+          今サイクルの投入累計: {fmt(invested)}
         </div>
 
         <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
