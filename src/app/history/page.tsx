@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { HistoryEntry, FundEntry, Settings, SlotState, defaultSettings, defaultSlotState } from '@/lib/cocomo';
 import PasswordConfirmModal from '@/components/PasswordConfirmModal';
+import TrendCharts from '@/components/TrendCharts';
 
 function fmt(n: number) {
   const sign = n < 0 ? '-' : '';
@@ -174,8 +175,11 @@ export default function HistoryPage() {
         )}
       </div>
 
+      {/* 資金・損益の推移グラフ */}
+      <TrendCharts entries={entries} funds={funds} initialCapital={settings.initialCapital} />
+
       {/* 入出金履歴 */}
-      <div style={{ fontSize: 12, color: 'var(--text-muted)', margin: '4px 0 8px' }}>入出金履歴</div>
+      <div style={{ fontSize: 12, color: 'var(--text-muted)', margin: '18px 0 8px' }}>入出金履歴</div>
       <div className="card" style={{ padding: 0 }}>
         {funds.length === 0 ? (
           <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12, padding: '16px 0' }}>まだ記録がありません</div>
