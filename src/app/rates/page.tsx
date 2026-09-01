@@ -33,9 +33,10 @@ export default function RatesPage() {
   }, []);
 
   const sorted = [...rates].sort((a, b) => {
-    if (a.odds12 == null) return 1;
-    if (b.odds12 == null) return -1;
-    return a.odds12 - b.odds12;
+    if (!a.deadline && !b.deadline) return 0;
+    if (!a.deadline) return 1;
+    if (!b.deadline) return -1;
+    return a.deadline.localeCompare(b.deadline);
   });
 
   return (
