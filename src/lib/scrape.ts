@@ -4,10 +4,16 @@ import { VENUES } from '@/lib/venues';
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
-async function fetchHtml(url: string): Promise<string> {
-  const res = await fetch(url, { headers: { 'User-Agent': UA }, cache: 'no-store' });
-  if (!res.ok) throw new Error(`fetch failed (${res.status})`);
-  return res.text();
+async function fetchHtml(url: string, timeoutMs = 15000): Promise<string> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': UA }, cache: 'no-store', signal: controller.signal });
+    if (!res.ok) throw new Error(`fetch failed (${res.status})`);
+    return await res.text();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export function todayHdJST(): string {

@@ -1,7 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { fetchActiveVenues, fetchRaceTimes, fetchOdds2t, todayHdJST, nowHMJST } from '@/lib/scrape';
+import { redis } from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
+export const preferredRegion = 'hnd1'; // 東京リージョンで実行し、公式サイトへの往復を短縮
 
 export type QuickRate = {
   code: string;
@@ -12,9 +14,24 @@ export type QuickRate = {
   error?: string;
 };
 
-export async function GET() {
+const CACHE_KEY = 'cocomo:quickrates';
+const CACHE_TTL_SEC = 12; // 短時間キャッシュ。更新ボタン(force=1)では無視される
+
+export async function GET(req: NextRequest) {
+  const force = req.nextUrl.searchParams.get('force') === '1';
   const hd = todayHdJST();
   const nowHM = nowHMJST();
+
+  if (!force) {
+    try {
+      const cached = await redis.get<{ hd: string; nowHM: string; results: QuickRate[] }>(CACHE_KEY);
+      if (cached && cached.hd === hd) {
+        return NextResponse.json({ ...cached, cached: true });
+      }
+    } catch {
+      // キャッシュ取得に失敗しても致命的ではないのでそのまま続行
+    }
+  }
 
   let venues: { code: string; name: string }[];
   try {
@@ -47,5 +64,8 @@ export async function GET() {
 
   results.sort((a, b) => a.code.localeCompare(b.code));
 
-  return NextResponse.json({ hd, nowHM, results });
+  const payload = { hd, nowHM, results };
+  redis.set(CACHE_KEY, payload, { ex: CACHE_TTL_SEC }).catch(() => {});
+
+  return NextResponse.json(payload);
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fetchOdds2t } from '@/lib/scrape';
 
 export const dynamic = 'force-dynamic';
+export const preferredRegion = 'hnd1'; // 東京リージョンで実行し、公式サイトへの往復を短縮
 
 // 個人利用の範囲での軽い参照用途を想定（高頻度アクセスは避けること）。
 export async function GET(req: NextRequest) {

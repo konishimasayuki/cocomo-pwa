@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fetchRaceTimes } from '@/lib/scrape';
 
 export const dynamic = 'force-dynamic';
+export const preferredRegion = 'hnd1'; // 東京リージョンで実行し、公式サイトへの往復を短縮
 
 export async function GET(req: NextRequest) {
   const jcd = req.nextUrl.searchParams.get('jcd');

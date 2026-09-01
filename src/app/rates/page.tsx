@@ -9,11 +9,11 @@ export default function RatesPage() {
   const [error, setError] = useState('');
   const [updatedAt, setUpdatedAt] = useState('');
 
-  async function load() {
+  async function load(force = false) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/quickrates');
+      const res = await fetch(`/api/quickrates${force ? '?force=1' : ''}`);
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || '取得できませんでした');
@@ -48,7 +48,7 @@ export default function RatesPage() {
           </div>
         </div>
         <button
-          onClick={load}
+          onClick={() => load(true)}
           disabled={loading}
           style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--panel)', color: 'var(--text)', fontSize: 12 }}
         >
