@@ -14,6 +14,9 @@ import {
 } from '@/lib/cocomo';
 
 const SPORTS: SportType[] = ['競艇', '競馬', '競輪', 'オート'];
+const BET_TYPES = ['単勝', 'ワイド', '二連単', '二連複', '三連単', '三連複'];
+
+type ComboEntry = { type: string; value: string };
 
 function todayStr() {
   const d = new Date();
@@ -36,11 +39,8 @@ export default function Home() {
   const [date, setDate] = useState(todayStr());
   const [venue, setVenue] = useState(SPORT_VENUES['競艇'][0]);
   const [race, setRace] = useState(1);
-  const [combos, setCombos] = useState<string[]>(['1-2']);
+  const [combos, setCombos] = useState<ComboEntry[]>([{ type: '二連単', value: '1-2' }]);
   const [saving, setSaving] = useState(false);
-
-  const [activeVenues, setActiveVenues] = useState<{ code: string; name: string }[]>([]);
-  const [venuesLoading, setVenuesLoading] = useState(false);
 
   const [winModalOpen, setWinModalOpen] = useState(false);
   const [winOdds, setWinOdds] = useState('');
@@ -48,28 +48,8 @@ export default function Home() {
   // 種目を切り替えたら会場を先頭にリセット
   useEffect(() => {
     setVenue(SPORT_VENUES[sport][0]);
-    setActiveVenues([]);
     setRace(1);
   }, [sport]);
-
-  // 競艇のみ: 日付が変わったら「その日に開催中の会場」一覧を取得
-  useEffect(() => {
-    if (sport !== '競艇') return;
-    const hd = date.replace(/-/g, '');
-    setVenuesLoading(true);
-    fetch(`/api/schedule?hd=${hd}`)
-      .then((r) => r.json())
-      .then((d) => {
-        const venues = d.venues ?? [];
-        setActiveVenues(venues);
-        if (venues.length > 0 && !venues.some((v: { name: string }) => v.name === venue)) {
-          setVenue(venues[0].name);
-        }
-      })
-      .catch(() => setActiveVenues([]))
-      .finally(() => setVenuesLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date, sport]);
 
   // レースは常に1〜12Rを表示（締切時刻での絞り込みは重いため撤去）
   const availableRaces = useMemo(() => Array.from({ length: 12 }, (_, i) => i + 1), []);
@@ -101,11 +81,14 @@ export default function Home() {
 
   const actualBetDiffers = actualBetInput !== '' && Number(actualBetInput) !== nextBet;
 
-  function updateCombo(i: number, v: string) {
-    setCombos((prev) => prev.map((c, idx) => (idx === i ? v : c)));
+  function updateComboValue(i: number, v: string) {
+    setCombos((prev) => prev.map((c, idx) => (idx === i ? { ...c, value: v } : c)));
+  }
+  function updateComboType(i: number, t: string) {
+    setCombos((prev) => prev.map((c, idx) => (idx === i ? { ...c, type: t } : c)));
   }
   function addCombo() {
-    setCombos((prev) => (prev.length >= 10 ? prev : [...prev, '']));
+    setCombos((prev) => (prev.length >= 10 ? prev : [...prev, { type: '二連単', value: '' }]));
   }
   function removeCombo(i: number) {
     setCombos((prev) => prev.filter((_, idx) => idx !== i));
@@ -144,9 +127,9 @@ export default function Home() {
       venue,
       race,
       slot: activeSlot,
-      combo: combos.map((c) => c.trim()).filter(Boolean).length > 0
-        ? combos.map((c) => c.trim()).filter(Boolean)
-        : ['-'],
+      combo: combos.map((c) => ({ ...c, value: c.value.trim() })).filter((c) => c.value).length > 0
+        ? combos.map((c) => ({ ...c, value: c.value.trim() })).filter((c) => c.value)
+        : [{ type: combos[0]?.type || '二連単', value: '-' }],
       bet,
       odds: oddsNum,
       won,
@@ -182,7 +165,7 @@ export default function Home() {
     return <div className="page" style={{ textAlign: 'center', paddingTop: 40, color: 'var(--text-muted)' }}>読み込み中…</div>;
   }
 
-  const venueOptions = sport === '競艇' && activeVenues.length > 0 ? activeVenues.map((v) => v.name) : SPORT_VENUES[sport];
+  const venueOptions = SPORT_VENUES[sport];
 
   return (
     <div className="page">
@@ -245,18 +228,14 @@ export default function Home() {
         </div>
 
         <div className="field-row">
-          <span>会場{venuesLoading ? '（更新中…）' : ''}</span>
+          <span>会場</span>
           <select value={venue} onChange={(e) => setVenue(e.target.value)}>
             {venueOptions.map((v) => (
               <option key={v} value={v}>{v}</option>
             ))}
           </select>
         </div>
-        {sport === '競艇' && activeVenues.length === 0 && !venuesLoading && (
-          <div style={{ fontSize: 10.5, color: 'var(--text-muted)', textAlign: 'right', marginTop: -6, marginBottom: 8 }}>
-            本日開催中の会場が見つかりませんでした（全会場を表示中）
-          </div>
-        )}
+
         <div className="field-row">
           <span>レース</span>
           <select value={race} onChange={(e) => setRace(Number(e.target.value))}>
@@ -270,10 +249,28 @@ export default function Home() {
           <div style={{ fontSize: 13, marginBottom: 6 }}>賭け目（例: 1-2）</div>
           {combos.map((c, i) => (
             <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+              <select
+                value={c.type}
+                onChange={(e) => updateComboType(i, e.target.value)}
+                style={{
+                  width: 84,
+                  flexShrink: 0,
+                  background: 'var(--panel-2)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text)',
+                  borderRadius: 6,
+                  padding: '7px 4px',
+                  fontSize: 11.5
+                }}
+              >
+                {BET_TYPES.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
               <input
                 type="text"
-                value={c}
-                onChange={(e) => updateCombo(i, e.target.value)}
+                value={c.value}
+                onChange={(e) => updateComboValue(i, e.target.value)}
                 placeholder="1-2"
                 style={{
                   flex: 1,
@@ -408,7 +405,7 @@ export default function Home() {
           >
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4, textAlign: 'center' }}>払戻オッズを入力</div>
             <div style={{ fontSize: 10.5, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 14 }}>
-              {venue} {race}R ・ 賭け目 {combos.filter(Boolean).join(', ') || '-'} ・ ベット額 {fmt(Number(actualBetInput) || 0)}
+              {venue} {race}R ・ 賭け目 {combos.filter((c) => c.value).map((c) => `${c.type} ${c.value}`).join(', ') || '-'} ・ ベット額 {fmt(Number(actualBetInput) || 0)}
             </div>
             <input
               type="number"

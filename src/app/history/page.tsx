@@ -289,7 +289,9 @@ export default function HistoryPage() {
                     {h.sport ? `[${h.sport}] ` : ''}{h.venue} {h.race}R・{h.slot}
                   </div>
                   <div className="mono" style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>
-                    {Array.isArray(h.combo) ? h.combo.join(',') : h.combo || '-'}
+                    {Array.isArray(h.combo)
+                      ? h.combo.map((c: any) => (typeof c === 'string' ? c : `${c.type} ${c.value}`)).join(', ')
+                      : h.combo || '-'}
                   </div>
                   <div className="mono" style={{ textAlign: 'right' }}>{fmt(h.bet)}</div>
                   <div className="mono" style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{h.odds ?? '-'}</div>
