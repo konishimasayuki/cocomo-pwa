@@ -1,12 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Settings, defaultSettings } from '@/lib/cocomo';
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [settings, setSettings] = useState<Settings>(defaultSettings());
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState('');
+
+  async function logout() {
+    await fetch('/api/login', { method: 'DELETE' });
+    router.push('/login');
+  }
 
   useEffect(() => {
     fetch('/api/state')
@@ -84,6 +91,10 @@ export default function SettingsPage() {
         <button onClick={resetAll} style={{ ...resetBtnStyle, width: '100%', color: 'var(--loss)' }}>
           全体をリセット（履歴も削除）
         </button>
+      </div>
+
+      <div className="card">
+        <button onClick={logout} style={{ ...resetBtnStyle, width: '100%' }}>ログアウト</button>
       </div>
 
       {msg && <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>{msg}</div>}

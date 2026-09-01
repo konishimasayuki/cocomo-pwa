@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 
 export default function BottomNav() {
   const pathname = usePathname();
+  if (pathname === '/login') return null;
 
   const itemColor = (path: string) =>
     pathname === path ? 'var(--accent)' : 'var(--text-muted)';
