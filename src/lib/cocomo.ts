@@ -80,10 +80,12 @@ export function applyResult(
   state: SlotState,
   baseUnit: number,
   won: boolean,
-  odds: number | null
+  odds: number | null,
+  actualBet?: number
 ): { nextState: SlotState; bet: number; pl: number } {
   const seq = ensureSequence(state.sequence, state.step);
-  const bet = seq[state.step] * baseUnit;
+  // 実際に賭けた金額（複数点買いやオッズの都合で理論値とずれることがある）を優先する
+  const bet = actualBet != null && actualBet > 0 ? actualBet : seq[state.step] * baseUnit;
   const pl = won ? bet * ((odds ?? 0) - 1) : -bet;
 
   const totalPL = state.totalPL + pl;

@@ -92,6 +92,15 @@ export default function Home() {
   const nextBet = useMemo(() => computeNextBet(state, baseUnit), [state, baseUnit]);
   const invested = useMemo(() => cycleInvested(state, baseUnit), [state, baseUnit]);
 
+  const [actualBetInput, setActualBetInput] = useState(String(nextBet));
+
+  // 理論上の次ベット額が変わったら（スロット切替・勝敗確定後など）実際のベット額欄も追従させる
+  useEffect(() => {
+    setActualBetInput(String(nextBet));
+  }, [nextBet]);
+
+  const actualBetDiffers = actualBetInput !== '' && Number(actualBetInput) !== nextBet;
+
   function updateCombo(i: number, v: string) {
     setCombos((prev) => prev.map((c, idx) => (idx === i ? v : c)));
   }
@@ -119,7 +128,8 @@ export default function Home() {
   }
 
   async function recordResult(won: boolean, oddsNum: number | null) {
-    const { nextState, bet, pl } = applyResult(state, baseUnit, won, oddsNum);
+    const actualBet = Number(actualBetInput) || undefined;
+    const { nextState, bet, pl } = applyResult(state, baseUnit, won, oddsNum, actualBet);
 
     const nextSlotA = activeSlot === 'A' ? nextState : slotA;
     const nextSlotB = activeSlot === 'B' ? nextState : slotB;
@@ -299,7 +309,7 @@ export default function Home() {
 
       {/* トートボード風表示 */}
       <div className="card" style={{ textAlign: 'center', padding: '22px 16px 16px' }}>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>次のベット額（ベット{activeSlot}）</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>次のベット額（理論値・ベット{activeSlot}）</div>
         <div className="mono" style={{ fontSize: 42, fontWeight: 700, color: 'var(--accent)', margin: '4px 0' }}>
           {fmt(nextBet)}
         </div>
@@ -309,6 +319,33 @@ export default function Home() {
         </div>
         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
           今サイクルの投入累計: {fmt(invested + nextBet)}
+        </div>
+
+        <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>
+            実際に賭けた金額（複数点買いなどでズレる場合はここを修正）
+          </div>
+          <input
+            type="number"
+            value={actualBetInput}
+            onChange={(e) => setActualBetInput(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px 10px',
+              fontSize: 22,
+              fontWeight: 700,
+              textAlign: 'center',
+              borderRadius: 8,
+              border: '1px solid var(--border)',
+              background: 'var(--panel-2)',
+              color: 'var(--text)'
+            }}
+          />
+          {actualBetDiffers && (
+            <div style={{ fontSize: 10.5, color: 'var(--accent)', marginTop: 6 }}>
+              理論値から{fmt(Number(actualBetInput) - nextBet)}のズレ
+            </div>
+          )}
         </div>
       </div>
 
@@ -372,7 +409,7 @@ export default function Home() {
           >
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4, textAlign: 'center' }}>払戻オッズを入力</div>
             <div style={{ fontSize: 10.5, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 14 }}>
-              {venue} {race}R ・ 賭け目 {combos.filter(Boolean).join(', ') || '-'}
+              {venue} {race}R ・ 賭け目 {combos.filter(Boolean).join(', ') || '-'} ・ ベット額 {fmt(Number(actualBetInput) || 0)}
             </div>
             <input
               type="number"
