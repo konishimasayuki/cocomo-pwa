@@ -150,21 +150,24 @@ export default function HistoryPage() {
             <div
               key={f.id}
               style={{
-                display: 'grid',
-                gridTemplateColumns: '58px 40px 1fr 90px',
-                gap: 6,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 8,
                 fontSize: 11.5,
                 padding: '9px 14px',
-                borderBottom: i === funds.length - 1 ? 'none' : '1px solid var(--border)',
-                alignItems: 'center'
+                borderBottom: i === funds.length - 1 ? 'none' : '1px solid var(--border)'
               }}
             >
-              <div style={{ color: 'var(--text-muted)' }}>{f.date.slice(5)}</div>
-              <div className="mono" style={{ color: 'var(--text-muted)' }}>{fmtTime(f.ts)}</div>
-              <div style={{ color: 'var(--text-muted)' }}>{f.note || (f.amount >= 0 ? '資金追加' : '引き出し')}</div>
-              <div className="mono" style={{ textAlign: 'right', color: f.amount >= 0 ? 'var(--win)' : 'var(--loss)' }}>
+              <span className="mono" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+                {f.date.slice(5)} {fmtTime(f.ts)}
+              </span>
+              <span style={{ color: 'var(--text-muted)', flex: 1, minWidth: 0, textAlign: 'right', overflowWrap: 'break-word' }}>
+                {f.note || (f.amount >= 0 ? '資金追加' : '引き出し')}
+              </span>
+              <span className="mono" style={{ flexShrink: 0, color: f.amount >= 0 ? 'var(--win)' : 'var(--loss)' }}>
                 {fmt(f.amount)}
-              </div>
+              </span>
             </div>
           ))}
         </div>
@@ -196,33 +199,41 @@ export default function HistoryPage() {
         <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12, padding: '20px 0' }}>まだ記録がありません</div>
       )}
 
+      {shown.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 14px 6px', fontSize: 10.5, color: 'var(--text-muted)' }}>
+          <span>日時・内容</span>
+          <span>結果・収支</span>
+        </div>
+      )}
+
       <div className="card" style={{ padding: 0 }}>
         {shown.map((h, i) => (
           <div
             key={h.id}
             style={{
-              display: 'grid',
-              gridTemplateColumns: '58px 40px 1fr 44px 60px 44px 74px',
-              gap: 6,
-              fontSize: 11.5,
               padding: '10px 14px',
-              borderBottom: i === shown.length - 1 ? 'none' : '1px solid var(--border)',
-              alignItems: 'center'
+              borderBottom: i === shown.length - 1 ? 'none' : '1px solid var(--border)'
             }}
           >
-            <div style={{ color: 'var(--text-muted)' }}>{h.date.slice(5)}</div>
-            <div className="mono" style={{ color: 'var(--text-muted)' }}>{fmtTime(h.ts)}</div>
-            <div style={{ color: 'var(--text-muted)' }}>
-              {h.sport ? `[${h.sport}] ` : ''}{h.venue} {h.race}R ・{h.slot}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, gap: 8 }}>
+              <span className="mono" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                {h.date.slice(5)} {fmtTime(h.ts)}
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: h.won ? 'var(--win)' : 'var(--loss)' }}>
+                  {h.won ? '勝ち' : '負け'}
+                </span>
+                <span className="mono" style={{ fontSize: 12.5, fontWeight: 600 }}>{fmt(h.running)}</span>
+              </span>
             </div>
-            <div className="mono" style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 10.5 }}>
-              {Array.isArray(h.combo) ? h.combo.join(',') : h.combo || '-'}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, fontSize: 11, color: 'var(--text-muted)' }}>
+              <span style={{ minWidth: 0, overflowWrap: 'break-word' }}>
+                {h.sport ? `[${h.sport}] ` : ''}{h.venue} {h.race}R・{h.slot}
+                {' '}
+                <span className="mono">{Array.isArray(h.combo) ? h.combo.join(',') : h.combo || '-'}</span>
+              </span>
+              <span className="mono" style={{ flexShrink: 0 }}>{fmt(h.bet)}</span>
             </div>
-            <div className="mono" style={{ textAlign: 'right' }}>{fmt(h.bet)}</div>
-            <div style={{ textAlign: 'center', fontWeight: 700, color: h.won ? 'var(--win)' : 'var(--loss)' }}>
-              {h.won ? '勝ち' : '負け'}
-            </div>
-            <div className="mono" style={{ textAlign: 'right' }}>{fmt(h.running)}</div>
           </div>
         ))}
       </div>
