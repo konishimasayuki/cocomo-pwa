@@ -14,6 +14,8 @@ export type Settings = {
   initialCapital: number; // 開始資金（円）
 };
 
+export const BET_TYPES = ['単勝', 'ワイド', '二連単', '二連複', '三連単', '三連複'];
+
 export type HistoryEntry = {
   id: string;
   ts: number;
@@ -24,11 +26,35 @@ export type HistoryEntry = {
   slot: 'A' | 'B';
   combo: { type: string; value: string }[]; // 賭け目（例: [{type:"二連単", value:"1-2"}]）複数買い対応
   bet: number;
-  odds: number | null;
+  odds: number | null;   // オッズで入力した場合
+  payout: number | null; // 配当金額で直接入力した場合（複数点買いなど、総賭け金×オッズが正しくないケース用）
   won: boolean;
   pl: number;
   running: number; // そのスロットの累計収支（この記録時点）
 };
+
+// 勝敗・ベット額・オッズ or 配当金額から損益を計算する
+export function computePL(entry: Pick<HistoryEntry, 'won' | 'bet' | 'odds' | 'payout'>): number {
+  if (!entry.won) return -entry.bet;
+  if (entry.payout != null) return entry.payout - entry.bet;
+  return entry.bet * ((entry.odds ?? 0) - 1);
+}
+
+// 履歴一覧（1スロット分）から running・totalPL・maxDrawdown を再計算する。
+// entriesは破壊的にrunningを書き換える。ts昇順（古い順）に並んでいる必要はなく内部でソートする。
+export function recomputeSlotStats(entries: HistoryEntry[]): { totalPL: number; peak: number; maxDrawdown: number } {
+  const sorted = entries.slice().sort((a, b) => a.ts - b.ts);
+  let running = 0;
+  let peak = 0;
+  let maxDrawdown = 0;
+  for (const e of sorted) {
+    running += e.pl;
+    peak = Math.max(peak, running);
+    maxDrawdown = Math.max(maxDrawdown, peak - running);
+    e.running = running;
+  }
+  return { totalPL: running, peak, maxDrawdown };
+}
 
 export type FundEntry = {
   id: string;
@@ -81,12 +107,13 @@ export function applyResult(
   baseUnit: number,
   won: boolean,
   odds: number | null,
-  actualBet?: number
+  actualBet?: number,
+  payout?: number | null
 ): { nextState: SlotState; bet: number; pl: number } {
   const seq = ensureSequence(state.sequence, state.step);
   // 実際に賭けた金額（複数点買いやオッズの都合で理論値とずれることがある）を優先する
   const bet = actualBet != null && actualBet > 0 ? actualBet : seq[state.step] * baseUnit;
-  const pl = won ? bet * ((odds ?? 0) - 1) : -bet;
+  const pl = won ? (payout != null ? payout - bet : bet * ((odds ?? 0) - 1)) : -bet;
 
   const totalPL = state.totalPL + pl;
   const peak = Math.max(state.peak, totalPL);

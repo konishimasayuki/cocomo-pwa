@@ -6,6 +6,7 @@ import {
   Settings,
   SlotState,
   HistoryEntry,
+  BET_TYPES,
   defaultSettings,
   defaultSlotState,
   computeNextBet,
@@ -14,7 +15,6 @@ import {
 } from '@/lib/cocomo';
 
 const SPORTS: SportType[] = ['競艇', '競馬', '競輪', 'オート'];
-const BET_TYPES = ['単勝', 'ワイド', '二連単', '二連複', '三連単', '三連複'];
 
 type ComboEntry = { type: string; value: string };
 
@@ -43,7 +43,9 @@ export default function Home() {
   const [saving, setSaving] = useState(false);
 
   const [winModalOpen, setWinModalOpen] = useState(false);
+  const [winMode, setWinMode] = useState<'odds' | 'payout'>('odds');
   const [winOdds, setWinOdds] = useState('');
+  const [winPayout, setWinPayout] = useState('');
 
   // 種目を切り替えたら会場を先頭にリセット
   useEffect(() => {
@@ -110,9 +112,9 @@ export default function Home() {
     saveAll(next, slotA, slotB);
   }
 
-  async function recordResult(won: boolean, oddsNum: number | null) {
+  async function recordResult(won: boolean, oddsNum: number | null, payoutNum: number | null = null) {
     const actualBet = Number(actualBetInput) || undefined;
-    const { nextState, bet, pl } = applyResult(state, baseUnit, won, oddsNum, actualBet);
+    const { nextState, bet, pl } = applyResult(state, baseUnit, won, oddsNum, actualBet, payoutNum);
 
     const nextSlotA = activeSlot === 'A' ? nextState : slotA;
     const nextSlotB = activeSlot === 'B' ? nextState : slotB;
@@ -132,6 +134,7 @@ export default function Home() {
         : [{ type: combos[0]?.type || '二連単', value: '-' }],
       bet,
       odds: oddsNum,
+      payout: payoutNum,
       won,
       pl,
       running: nextState.totalPL
@@ -149,17 +152,28 @@ export default function Home() {
 
   function openWinModal() {
     setWinOdds('');
+    setWinPayout('');
+    setWinMode('odds');
     setWinModalOpen(true);
   }
 
   function confirmWin() {
-    const n = parseFloat(winOdds);
-    if (!n || n <= 0) return;
-    setWinModalOpen(false);
-    recordResult(true, n);
+    if (winMode === 'odds') {
+      const n = parseFloat(winOdds);
+      if (!n || n <= 0) return;
+      setWinModalOpen(false);
+      recordResult(true, n, null);
+    } else {
+      const n = parseFloat(winPayout);
+      if (!n || n <= 0) return;
+      setWinModalOpen(false);
+      recordResult(true, null, n);
+    }
   }
 
-  const winOddsWarn = winOdds !== '' && parseFloat(winOdds) > 0 && parseFloat(winOdds) < settings.minOdds;
+  const winOddsWarn = winMode === 'odds' && winOdds !== '' && parseFloat(winOdds) > 0 && parseFloat(winOdds) < settings.minOdds;
+  const winConfirmDisabled = winMode === 'odds' ? !winOdds || parseFloat(winOdds) <= 0 : !winPayout || parseFloat(winPayout) <= 0;
+
 
   if (loading) {
     return <div className="page" style={{ textAlign: 'center', paddingTop: 40, color: 'var(--text-muted)' }}>読み込み中…</div>;
@@ -403,29 +417,93 @@ export default function Home() {
             style={{ width: '100%', maxWidth: 340, margin: 0 }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4, textAlign: 'center' }}>払戻オッズを入力</div>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4, textAlign: 'center' }}>払戻の入力</div>
             <div style={{ fontSize: 10.5, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 14 }}>
               {venue} {race}R ・ 賭け目 {combos.filter((c) => c.value).map((c) => `${c.type} ${c.value}`).join(', ') || '-'} ・ ベット額 {fmt(Number(actualBetInput) || 0)}
             </div>
-            <input
-              type="number"
-              step="0.1"
-              autoFocus
-              value={winOdds}
-              onChange={(e) => setWinOdds(e.target.value)}
-              placeholder="例: 3.5"
-              style={{
-                width: '100%',
-                padding: '14px 12px',
-                fontSize: 20,
-                textAlign: 'center',
-                borderRadius: 8,
-                border: '1px solid var(--border)',
-                background: 'var(--panel-2)',
-                color: 'var(--text)',
-                marginBottom: 8
-              }}
-            />
+
+            <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+              <button
+                onClick={() => setWinMode('odds')}
+                style={{
+                  flex: 1,
+                  padding: '8px 0',
+                  borderRadius: 8,
+                  border: `1px solid ${winMode === 'odds' ? 'var(--accent)' : 'var(--border)'}`,
+                  background: winMode === 'odds' ? 'rgba(232,163,61,0.12)' : 'var(--panel-2)',
+                  color: winMode === 'odds' ? 'var(--text)' : 'var(--text-muted)',
+                  fontSize: 12
+                }}
+              >
+                オッズで入力
+              </button>
+              <button
+                onClick={() => setWinMode('payout')}
+                style={{
+                  flex: 1,
+                  padding: '8px 0',
+                  borderRadius: 8,
+                  border: `1px solid ${winMode === 'payout' ? 'var(--accent)' : 'var(--border)'}`,
+                  background: winMode === 'payout' ? 'rgba(232,163,61,0.12)' : 'var(--panel-2)',
+                  color: winMode === 'payout' ? 'var(--text)' : 'var(--text-muted)',
+                  fontSize: 12
+                }}
+              >
+                配当金額で入力
+              </button>
+            </div>
+
+            {winMode === 'odds' ? (
+              <>
+                <input
+                  type="number"
+                  step="0.1"
+                  autoFocus
+                  value={winOdds}
+                  onChange={(e) => setWinOdds(e.target.value)}
+                  placeholder="オッズ 例: 3.5"
+                  style={{
+                    width: '100%',
+                    padding: '14px 12px',
+                    fontSize: 20,
+                    textAlign: 'center',
+                    borderRadius: 8,
+                    border: '1px solid var(--border)',
+                    background: 'var(--panel-2)',
+                    color: 'var(--text)',
+                    marginBottom: 8
+                  }}
+                />
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 8 }}>
+                  ベット額全体×オッズで計算されます。複数点買いなど当たった点だけのオッズでは正しく出ない場合は「配当金額で入力」を使ってください。
+                </div>
+              </>
+            ) : (
+              <>
+                <input
+                  type="number"
+                  autoFocus
+                  value={winPayout}
+                  onChange={(e) => setWinPayout(e.target.value)}
+                  placeholder="配当金額（受け取った総額）"
+                  style={{
+                    width: '100%',
+                    padding: '14px 12px',
+                    fontSize: 20,
+                    textAlign: 'center',
+                    borderRadius: 8,
+                    border: '1px solid var(--border)',
+                    background: 'var(--panel-2)',
+                    color: 'var(--text)',
+                    marginBottom: 8
+                  }}
+                />
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 8 }}>
+                  払戻金の合計金額をそのまま入力してください（オッズからは計算しません）。
+                </div>
+              </>
+            )}
+
             {winOddsWarn && (
               <div style={{ fontSize: 11, color: 'var(--loss)', textAlign: 'center', marginBottom: 8 }}>
                 推奨オッズ({settings.minOdds}倍)未満です
@@ -440,7 +518,7 @@ export default function Home() {
               </button>
               <button
                 onClick={confirmWin}
-                disabled={!winOdds || parseFloat(winOdds) <= 0}
+                disabled={winConfirmDisabled}
                 style={{ flex: 1, padding: '12px 0', borderRadius: 8, border: 'none', background: 'var(--win)', color: '#0B1F33', fontWeight: 700, fontSize: 13 }}
               >
                 確定

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { HistoryEntry, FundEntry, Settings, SlotState, defaultSettings, defaultSlotState } from '@/lib/cocomo';
 import PasswordConfirmModal from '@/components/PasswordConfirmModal';
+import EditHistoryModal from '@/components/EditHistoryModal';
 import TrendCharts from '@/components/TrendCharts';
 
 function fmt(n: number) {
@@ -21,7 +22,7 @@ function todayStr() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-const COLS = '78px 150px 90px 64px 50px 44px 78px 78px 36px';
+const COLS = '78px 150px 90px 64px 50px 44px 78px 78px 32px 32px';
 
 export default function HistoryPage() {
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
@@ -40,6 +41,7 @@ export default function HistoryPage() {
   const [fundError, setFundError] = useState('');
 
   const [deleteTarget, setDeleteTarget] = useState<null | { type: 'history' | 'fund'; id: string }>(null);
+  const [editTarget, setEditTarget] = useState<HistoryEntry | null>(null);
 
   async function loadAll() {
     const [h, f, s] = await Promise.all([
@@ -266,9 +268,10 @@ export default function HistoryPage() {
               <div style={{ textAlign: 'right' }}>当選金額</div>
               <div style={{ textAlign: 'right' }}>累計収支</div>
               <div></div>
+              <div></div>
             </div>
             {shown.map((h, i) => {
-              const payout = h.won && h.odds ? h.bet * h.odds : null;
+              const payout = h.won ? (h.payout ?? (h.odds ? h.bet * h.odds : null)) : null;
               return (
                 <div
                   key={h.id}
@@ -301,6 +304,12 @@ export default function HistoryPage() {
                   <div className="mono" style={{ textAlign: 'right', color: 'var(--win)' }}>{payout ? fmt(payout) : '-'}</div>
                   <div className="mono" style={{ textAlign: 'right', fontWeight: 600 }}>{fmt(h.running)}</div>
                   <button
+                    onClick={() => setEditTarget(h)}
+                    style={{ width: 26, height: 26, borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 12, justifySelf: 'center' }}
+                  >
+                    ✎
+                  </button>
+                  <button
                     onClick={() => setDeleteTarget({ type: 'history', id: h.id })}
                     style={{ width: 26, height: 26, borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 13, justifySelf: 'center' }}
                   >
@@ -311,6 +320,17 @@ export default function HistoryPage() {
             })}
           </div>
         </div>
+      )}
+
+      {editTarget && (
+        <EditHistoryModal
+          entry={editTarget}
+          onCancel={() => setEditTarget(null)}
+          onSaved={() => {
+            setEditTarget(null);
+            loadAll();
+          }}
+        />
       )}
 
       <PasswordConfirmModal
