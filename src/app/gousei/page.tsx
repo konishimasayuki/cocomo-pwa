@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const ROWS = 5;
 
@@ -11,6 +11,24 @@ function fmt(n: number) {
 
 type RowResult = { stake: number; payout: number } | null;
 
+type SavedState = {
+  oddsInputs: string[];
+  totalStake: string;
+  results: RowResult[] | null;
+  combinedOdds: number | null;
+  actualStakeTotal: number | null;
+};
+
+function emptyState(): SavedState {
+  return {
+    oddsInputs: Array(ROWS).fill(''),
+    totalStake: '',
+    results: null,
+    combinedOdds: null,
+    actualStakeTotal: null
+  };
+}
+
 export default function GouseiPage() {
   const [oddsInputs, setOddsInputs] = useState<string[]>(Array(ROWS).fill(''));
   const [totalStake, setTotalStake] = useState('');
@@ -18,6 +36,31 @@ export default function GouseiPage() {
   const [combinedOdds, setCombinedOdds] = useState<number | null>(null);
   const [actualStakeTotal, setActualStakeTotal] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/gousei')
+      .then((r) => r.json())
+      .then((d) => {
+        const s: SavedState | null = d.state;
+        if (s) {
+          setOddsInputs(s.oddsInputs ?? Array(ROWS).fill(''));
+          setTotalStake(s.totalStake ?? '');
+          setResults(s.results ?? null);
+          setCombinedOdds(s.combinedOdds ?? null);
+          setActualStakeTotal(s.actualStakeTotal ?? null);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  function persist(state: SavedState) {
+    fetch('/api/gousei', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state)
+    }).catch(() => {});
+  }
 
   function updateOdds(i: number, v: string) {
     setOddsInputs((prev) => prev.map((o, idx) => (idx === i ? v : o)));
@@ -58,19 +101,45 @@ export default function GouseiPage() {
     const actualTotal = rowResults.reduce((s, r) => s + (r ? r.stake : 0), 0);
     const payouts = rowResults.filter((r): r is { stake: number; payout: number } => !!r).map((r) => r.payout);
     const minPayout = Math.min(...payouts);
+    const combined = actualTotal > 0 ? minPayout / actualTotal : null;
 
     setResults(rowResults);
     setActualStakeTotal(actualTotal);
-    setCombinedOdds(actualTotal > 0 ? minPayout / actualTotal : null);
+    setCombinedOdds(combined);
+
+    persist({ oddsInputs, totalStake, results: rowResults, combinedOdds: combined, actualStakeTotal: actualTotal });
+  }
+
+  function reset() {
+    const empty = emptyState();
+    setOddsInputs(empty.oddsInputs);
+    setTotalStake(empty.totalStake);
+    setResults(empty.results);
+    setCombinedOdds(empty.combinedOdds);
+    setActualStakeTotal(empty.actualStakeTotal);
+    setError('');
+    fetch('/api/gousei', { method: 'DELETE' }).catch(() => {});
+  }
+
+  if (loading) {
+    return <div className="page" style={{ textAlign: 'center', paddingTop: 40, color: 'var(--text-muted)' }}>読み込み中…</div>;
   }
 
   return (
     <div className="page">
-      <header style={{ marginBottom: 14 }}>
-        <h1 style={{ fontSize: 15, fontWeight: 600 }}>合成オッズ計算</h1>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-          複数の目に分けて賭けたとき、どの目が来ても配当が同じになるよう賭け金を配分します
+      <header style={{ marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div>
+          <h1 style={{ fontSize: 15, fontWeight: 600 }}>合成オッズ計算</h1>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+            複数の目に分けて賭けたとき、どの目が来ても配当が同じになるよう賭け金を配分します
+          </div>
         </div>
+        <button
+          onClick={reset}
+          style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', fontSize: 12, flexShrink: 0 }}
+        >
+          リセット
+        </button>
       </header>
 
       <div className="card">
