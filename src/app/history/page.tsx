@@ -63,6 +63,20 @@ export default function HistoryPage() {
 
   const totalPL = slotA.totalPL + slotB.totalPL;
   const depositTotal = useMemo(() => funds.reduce((a, f) => a + f.amount, 0), [funds]);
+
+  // 戦目が記録されていない古い履歴のために、勝敗パターンから何戦目だったかを計算で補う
+  const computedSteps = useMemo(() => {
+    const map = new Map<string, number>();
+    (['A', 'B'] as const).forEach((slot) => {
+      const sorted = entries.filter((e) => e.slot === slot).sort((a, b) => a.ts - b.ts);
+      let step = 0;
+      for (const e of sorted) {
+        map.set(e.id, step + 1);
+        step = e.won ? 0 : step + 1;
+      }
+    });
+    return map;
+  }, [entries]);
   const currentFunds = settings.initialCapital + depositTotal + totalPL;
 
   const shown = entries.filter((e) => filter === 'ALL' || e.slot === filter);
@@ -290,7 +304,7 @@ export default function HistoryPage() {
                     {h.date.slice(5)} {fmtTime(h.ts)}
                   </div>
                   <div className="mono" style={{ color: 'var(--text-muted)', fontSize: 10.5 }}>
-                    {h.step ? `${h.step}戦目` : '-'}
+                    {h.step ?? computedSteps.get(h.id) ?? '-'}戦目
                   </div>
                   <div style={{ color: 'var(--text-muted)', fontSize: 10.5 }}>
                     {h.sport ? `[${h.sport}] ` : ''}{h.venue} {h.race}R・{h.slot}
