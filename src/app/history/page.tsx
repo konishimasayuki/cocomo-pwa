@@ -61,6 +61,22 @@ export default function HistoryPage() {
     loadAll();
   }, []);
 
+  // 最高連敗数とその発生日時（全体を時系列順に見て計算）
+  const maxLossStreak = useMemo(() => {
+    const sorted = entries.slice().sort((a, b) => a.ts - b.ts);
+    let streak = 0;
+    let best = { count: 0, date: '', ts: 0 };
+    for (const e of sorted) {
+      if (!e.won) {
+        streak += 1;
+        if (streak > best.count) best = { count: streak, date: e.date, ts: e.ts };
+      } else {
+        streak = 0;
+      }
+    }
+    return best;
+  }, [entries]);
+
   const totalPL = slotA.totalPL + slotB.totalPL;
   const depositTotal = useMemo(() => funds.reduce((a, f) => a + f.amount, 0), [funds]);
 
@@ -195,23 +211,39 @@ export default function HistoryPage() {
       <TrendCharts entries={entries} funds={funds} initialCapital={settings.initialCapital} />
 
       {/* 勝率などの統計 */}
-      <div className="card" style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
-        <div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>ベット回数</div>
-          <div className="mono" style={{ fontSize: 17, fontWeight: 700 }}>{entries.length}</div>
-        </div>
-        <div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>当選回数</div>
-          <div className="mono" style={{ fontSize: 17, fontWeight: 700, color: 'var(--win)' }}>
-            {entries.filter((e) => e.won).length}
+      <div className="card">
+        <div style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>ベット回数</div>
+            <div className="mono" style={{ fontSize: 17, fontWeight: 700 }}>{entries.length}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>当選回数</div>
+            <div className="mono" style={{ fontSize: 17, fontWeight: 700, color: 'var(--win)' }}>
+              {entries.filter((e) => e.won).length}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>勝率</div>
+            <div className="mono" style={{ fontSize: 17, fontWeight: 700, color: 'var(--accent)' }}>
+              {entries.length > 0 ? `${((entries.filter((e) => e.won).length / entries.length) * 100).toFixed(1)}%` : '-'}
+            </div>
           </div>
         </div>
-        <div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>勝率</div>
-          <div className="mono" style={{ fontSize: 17, fontWeight: 700, color: 'var(--accent)' }}>
-            {entries.length > 0 ? `${((entries.filter((e) => e.won).length / entries.length) * 100).toFixed(1)}%` : '-'}
+
+        {maxLossStreak.count > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              最高連敗
+              <span className="mono" style={{ fontSize: 10.5, marginLeft: 8 }}>
+                {maxLossStreak.date} {fmtTime(maxLossStreak.ts)}
+              </span>
+            </div>
+            <div className="mono" style={{ fontSize: 17, fontWeight: 700, color: 'var(--loss)' }}>
+              {maxLossStreak.count}連敗
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* 入出金履歴 */}
