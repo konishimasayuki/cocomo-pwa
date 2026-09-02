@@ -16,12 +16,14 @@ export default function GouseiPage() {
   const [totalStake, setTotalStake] = useState('');
   const [results, setResults] = useState<RowResult[] | null>(null);
   const [combinedOdds, setCombinedOdds] = useState<number | null>(null);
+  const [actualStakeTotal, setActualStakeTotal] = useState<number | null>(null);
   const [error, setError] = useState('');
 
   function updateOdds(i: number, v: string) {
     setOddsInputs((prev) => prev.map((o, idx) => (idx === i ? v : o)));
     setResults(null);
     setCombinedOdds(null);
+    setActualStakeTotal(null);
   }
 
   function calculate() {
@@ -43,17 +45,23 @@ export default function GouseiPage() {
     }
 
     const W = parsed.reduce((s: number, o) => s + (o ? 1 / o : 0), 0);
-    const combined = 1 / W;
 
+    // 理論上の配分を出したあと、賭け金は100円単位（最低100円）に丸める
     const rowResults: RowResult[] = parsed.map((o) => {
       if (!o) return null;
-      const stake = (total * (1 / o)) / W;
+      const rawStake = (total * (1 / o)) / W;
+      const stake = Math.max(100, Math.round(rawStake / 100) * 100);
       const payout = stake * o;
       return { stake, payout };
     });
 
+    const actualTotal = rowResults.reduce((s, r) => s + (r ? r.stake : 0), 0);
+    const payouts = rowResults.filter((r): r is { stake: number; payout: number } => !!r).map((r) => r.payout);
+    const minPayout = Math.min(...payouts);
+
     setResults(rowResults);
-    setCombinedOdds(combined);
+    setActualStakeTotal(actualTotal);
+    setCombinedOdds(actualTotal > 0 ? minPayout / actualTotal : null);
   }
 
   return (
@@ -106,6 +114,7 @@ export default function GouseiPage() {
               setTotalStake(e.target.value);
               setResults(null);
               setCombinedOdds(null);
+              setActualStakeTotal(null);
             }}
             placeholder="例: 3000"
           />
@@ -121,14 +130,20 @@ export default function GouseiPage() {
         </button>
       </div>
 
-      {combinedOdds != null && (
+      {combinedOdds != null && actualStakeTotal != null && (
         <div className="card" style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>合成オッズ</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>実質合成オッズ（最低保証ライン）</div>
           <div className="mono" style={{ fontSize: 34, fontWeight: 700, color: 'var(--accent)', margin: '4px 0' }}>
             {combinedOdds.toFixed(2)}倍
           </div>
           <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>
-            どの目が的中しても払戻は約{fmt((Number(totalStake) || 0) * combinedOdds)}になります
+            賭け金は100円単位に調整済み・実際の合計賭け金 {fmt(actualStakeTotal)}
+            {Number(totalStake) && actualStakeTotal !== Number(totalStake) && (
+              <> （入力值 {fmt(Number(totalStake))} から調整）</>
+            )}
+          </div>
+          <div style={{ fontSize: 10.5, color: 'var(--text-muted)', marginTop: 4 }}>
+            どの目が的中しても、配当は最低{fmt(combinedOdds * actualStakeTotal)}以上になります
           </div>
         </div>
       )}
