@@ -11,6 +11,7 @@ import {
   defaultSlotState,
   computeNextBet,
   cycleInvested,
+  cocomoSequence,
   applyResult
 } from '@/lib/cocomo';
 
@@ -112,6 +113,18 @@ export default function Home() {
     saveAll(next, slotA, slotB);
   }
 
+  function adjustStep(delta: number) {
+    const newStep = Math.max(0, state.step + delta);
+    const sequence = cocomoSequence(newStep + 1);
+    const nextState: SlotState = { ...state, sequence, step: newStep };
+
+    const nextSlotA = activeSlot === 'A' ? nextState : slotA;
+    const nextSlotB = activeSlot === 'B' ? nextState : slotB;
+    setSlotA(nextSlotA);
+    setSlotB(nextSlotB);
+    saveAll(settings, nextSlotA, nextSlotB);
+  }
+
   async function recordResult(won: boolean, oddsNum: number | null, payoutNum: number | null = null) {
     const actualBet = Number(actualBetInput) || undefined;
     const { nextState, bet, pl } = applyResult(state, baseUnit, won, oddsNum, actualBet, payoutNum);
@@ -129,6 +142,7 @@ export default function Home() {
       venue,
       race,
       slot: activeSlot,
+      step: state.step + 1,
       combo: combos.map((c) => ({ ...c, value: c.value.trim() })).filter((c) => c.value).length > 0
         ? combos.map((c) => ({ ...c, value: c.value.trim() })).filter((c) => c.value)
         : [{ type: combos[0]?.type || '二連単', value: '-' }],
@@ -321,11 +335,26 @@ export default function Home() {
       {/* トートボード風表示 */}
       <div className="card" style={{ textAlign: 'center', padding: '22px 16px 16px' }}>
         <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>次のベット額（理論値・ベット{activeSlot}）</div>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 10, margin: '4px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, margin: '4px 0' }}>
           <span className="mono" style={{ fontSize: 16, color: 'var(--text-muted)' }}>{state.step + 1}戦目</span>
           <span className="mono" style={{ fontSize: 42, fontWeight: 700, color: 'var(--accent)' }}>
             {fmt(nextBet)}
           </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <button
+              onClick={() => adjustStep(1)}
+              style={{ width: 26, height: 22, borderRadius: 5, border: '1px solid var(--border)', background: 'var(--panel-2)', color: 'var(--text-muted)', fontSize: 11, lineHeight: 1 }}
+            >
+              ▲
+            </button>
+            <button
+              onClick={() => adjustStep(-1)}
+              disabled={state.step === 0}
+              style={{ width: 26, height: 22, borderRadius: 5, border: '1px solid var(--border)', background: 'var(--panel-2)', color: 'var(--text-muted)', fontSize: 11, lineHeight: 1 }}
+            >
+              ▼
+            </button>
+          </div>
         </div>
         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
           今サイクルの投入累計: {fmt(invested)}

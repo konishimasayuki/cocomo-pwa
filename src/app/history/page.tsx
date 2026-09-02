@@ -22,7 +22,7 @@ function todayStr() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-const COLS = '78px 150px 90px 64px 50px 44px 78px 78px 32px 32px';
+const COLS = '78px 40px 150px 90px 64px 50px 44px 78px 78px 32px 32px';
 
 export default function HistoryPage() {
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
@@ -247,7 +247,7 @@ export default function HistoryPage() {
 
       {shown.length > 0 && (
         <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
-          <div style={{ minWidth: 750 }}>
+          <div style={{ minWidth: 790 }}>
             <div
               style={{
                 display: 'grid',
@@ -260,6 +260,7 @@ export default function HistoryPage() {
               }}
             >
               <div>日時</div>
+              <div>戦目</div>
               <div>内容</div>
               <div>賭け目</div>
               <div style={{ textAlign: 'right' }}>ベット額</div>
@@ -287,6 +288,9 @@ export default function HistoryPage() {
                 >
                   <div className="mono" style={{ color: 'var(--text-muted)', fontSize: 10.5 }}>
                     {h.date.slice(5)} {fmtTime(h.ts)}
+                  </div>
+                  <div className="mono" style={{ color: 'var(--text-muted)', fontSize: 10.5 }}>
+                    {h.step ? `${h.step}戦目` : '-'}
                   </div>
                   <div style={{ color: 'var(--text-muted)', fontSize: 10.5 }}>
                     {h.sport ? `[${h.sport}] ` : ''}{h.venue} {h.race}R・{h.slot}

@@ -24,6 +24,7 @@ export type HistoryEntry = {
   venue: string;
   race: number;
   slot: 'A' | 'B';
+  step: number; // 記録時点で何戦目だったか（1始まり）
   combo: { type: string; value: string }[]; // 賭け目（例: [{type:"二連単", value:"1-2"}]）複数買い対応
   bet: number;
   odds: number | null;   // オッズで入力した場合
