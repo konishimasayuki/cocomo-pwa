@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { HistoryEntry, FundEntry } from '@/lib/cocomo';
 
@@ -40,11 +41,17 @@ function ScrollChart({
   label: string;
 }) {
   const width = Math.max(320, points.length * 34);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollLeft = el.scrollWidth;
+  }, [points.length]);
 
   return (
     <div>
       <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginBottom: 6 }}>{label}</div>
-      <div style={{ overflowX: 'auto' }}>
+      <div ref={scrollRef} style={{ overflowX: 'auto' }}>
         <div style={{ width }}>
           <ResponsiveContainer width="100%" height={150}>
             <LineChart data={points} margin={{ top: 6, right: 10, left: 0, bottom: 0 }}>
