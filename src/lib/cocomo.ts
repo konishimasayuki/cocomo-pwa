@@ -89,6 +89,24 @@ function ensureSequence(sequence: number[], step: number): number[] {
   return seq;
 }
 
+// 履歴（1スロット分）を古い順に再生して、現在あるべき数列・投目を復元する。
+// 履歴を削除・編集した後、ベット状態（何投目か）を実態に合わせて巻き戻すために使う。
+export function replaySlotSequence(entries: HistoryEntry[]): { sequence: number[]; step: number } {
+  const sorted = entries.slice().sort((a, b) => a.ts - b.ts);
+  let sequence = [1, 1];
+  let step = 0;
+  for (const e of sorted) {
+    if (e.won) {
+      sequence = [1, 1];
+      step = 0;
+    } else {
+      sequence = ensureSequence(sequence, step + 1);
+      step += 1;
+    }
+  }
+  return { sequence, step };
+}
+
 export function computeNextBet(state: SlotState, baseUnit: number): number {
   const seq = ensureSequence(state.sequence, state.step);
   return seq[state.step] * baseUnit;

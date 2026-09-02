@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { redis, KEYS } from '@/lib/redis';
-import { HistoryEntry, SlotState, computePL, recomputeSlotStats } from '@/lib/cocomo';
+import { HistoryEntry, SlotState, computePL, recomputeSlotStats, replaySlotSequence } from '@/lib/cocomo';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,14 +19,17 @@ export async function POST(req: NextRequest) {
 }
 
 async function rewriteAndRecompute(all: HistoryEntry[]) {
-  const slotStats: Record<'A' | 'B', { totalPL: number; peak: number; maxDrawdown: number }> = {
-    A: { totalPL: 0, peak: 0, maxDrawdown: 0 },
-    B: { totalPL: 0, peak: 0, maxDrawdown: 0 }
+  const slotStats: Record<'A' | 'B', { totalPL: number; peak: number; maxDrawdown: number; sequence: number[]; step: number }> = {
+    A: { totalPL: 0, peak: 0, maxDrawdown: 0, sequence: [1, 1], step: 0 },
+    B: { totalPL: 0, peak: 0, maxDrawdown: 0, sequence: [1, 1], step: 0 }
   };
 
   (['A', 'B'] as const).forEach((slot) => {
+    const slotEntries = all.filter((e) => e.slot === slot);
     // recomputeSlotStatsはentries内のrunningを書き換える（元配列のオブジェクト参照を変更）
-    slotStats[slot] = recomputeSlotStats(all.filter((e) => e.slot === slot));
+    const stats = recomputeSlotStats(slotEntries);
+    const { sequence, step } = replaySlotSequence(slotEntries);
+    slotStats[slot] = { ...stats, sequence, step };
   });
 
   await redis.del(KEYS.history);
@@ -45,7 +48,7 @@ async function rewriteAndRecompute(all: HistoryEntry[]) {
 }
 
 // 1件だけ削除（idで指定）。全件読み出して該当分を除いて書き戻し、
-// 各スロットの収支・最大ドローダウンを残った履歴から再計算する（数列・投目はそのまま）。
+// 各スロットの収支・最大ドローダウン・数列（何投目か）を残った履歴から再計算する。
 export async function DELETE(req: NextRequest) {
   const id = req.nextUrl.searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'id は必須です' }, { status: 400 });
@@ -59,7 +62,7 @@ export async function DELETE(req: NextRequest) {
 }
 
 // 1件を編集（idで指定、bodyは更新後の全フィールド）。
-// pl・runningを再計算し、両スロットの収支も再計算する。
+// pl・runningを再計算し、両スロットの収支・数列も再計算する。
 export async function PATCH(req: NextRequest) {
   const updated = (await req.json()) as HistoryEntry;
   if (!updated?.id) return NextResponse.json({ error: 'id は必須です' }, { status: 400 });
