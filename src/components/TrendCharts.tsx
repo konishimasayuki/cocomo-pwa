@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { HistoryEntry, FundEntry } from '@/lib/cocomo';
 
@@ -40,46 +39,35 @@ function ScrollChart({
   color: string;
   label: string;
 }) {
-  const width = Math.max(320, points.length * 34);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (el) el.scrollLeft = el.scrollWidth;
-  }, [points.length]);
-
   return (
     <div>
       <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginBottom: 6 }}>{label}</div>
-      <div ref={scrollRef} style={{ overflowX: 'auto' }}>
-        <div style={{ width }}>
-          <ResponsiveContainer width="100%" height={150}>
-            <LineChart data={points} margin={{ top: 6, right: 10, left: 0, bottom: 0 }}>
-              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-              <XAxis
-                dataKey="n"
-                tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                axisLine={{ stroke: 'var(--border)' }}
-                tickLine={false}
-                label={{ value: '回数', position: 'insideBottomRight', fill: 'var(--text-muted)', fontSize: 10, dy: 10 }}
-              />
-              <YAxis
-                tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                axisLine={false}
-                tickLine={false}
-                width={54}
-                tickFormatter={(v) => fmt(v)}
-              />
-              <Tooltip
-                contentStyle={{ background: 'var(--panel-2)', border: '1px solid var(--border)', fontSize: 11 }}
-                labelFormatter={(v) => `${v}回目`}
-                formatter={(v: number) => [fmt(v), label]}
-              />
-              <Line type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} dot={false} isAnimationActive={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      <ResponsiveContainer width="100%" height={150}>
+        <LineChart data={points} margin={{ top: 6, right: 10, left: 0, bottom: 0 }}>
+          <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+          <XAxis
+            dataKey="n"
+            tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+            axisLine={{ stroke: 'var(--border)' }}
+            tickLine={false}
+            interval="preserveStartEnd"
+            label={{ value: '回数', position: 'insideBottomRight', fill: 'var(--text-muted)', fontSize: 10, dy: 10 }}
+          />
+          <YAxis
+            tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+            axisLine={false}
+            tickLine={false}
+            width={54}
+            tickFormatter={(v) => fmt(v)}
+          />
+          <Tooltip
+            contentStyle={{ background: 'var(--panel-2)', border: '1px solid var(--border)', fontSize: 11 }}
+            labelFormatter={(v) => `${v}回目`}
+            formatter={(v: number) => [fmt(v), label]}
+          />
+          <Line type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} dot={false} isAnimationActive={false} />
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 }
