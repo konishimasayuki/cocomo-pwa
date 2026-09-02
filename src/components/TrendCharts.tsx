@@ -19,11 +19,13 @@ function buildPoints(entries: HistoryEntry[], funds: FundEntry[], initialCapital
 
   let runningPL = 0;
   let runningFunds = initialCapital;
-  return events.map((ev, i) => {
+  const points: Point[] = [{ n: 0, funds: runningFunds, pl: runningPL }];
+  events.forEach((ev) => {
     if (ev.kind === 'bet') runningPL += ev.delta;
     runningFunds += ev.delta;
-    return { n: i + 1, funds: runningFunds, pl: runningPL };
+    points.push({ n: points.length, funds: runningFunds, pl: runningPL });
   });
+  return points;
 }
 
 function ScrollChart({
