@@ -194,6 +194,26 @@ export default function HistoryPage() {
       {/* 資金・損益の推移グラフ */}
       <TrendCharts entries={entries} funds={funds} initialCapital={settings.initialCapital} />
 
+      {/* 勝率などの統計 */}
+      <div className="card" style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
+        <div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>ベット回数</div>
+          <div className="mono" style={{ fontSize: 17, fontWeight: 700 }}>{entries.length}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>当選回数</div>
+          <div className="mono" style={{ fontSize: 17, fontWeight: 700, color: 'var(--win)' }}>
+            {entries.filter((e) => e.won).length}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>勝率</div>
+          <div className="mono" style={{ fontSize: 17, fontWeight: 700, color: 'var(--accent)' }}>
+            {entries.length > 0 ? `${((entries.filter((e) => e.won).length / entries.length) * 100).toFixed(1)}%` : '-'}
+          </div>
+        </div>
+      </div>
+
       {/* 入出金履歴 */}
       <div style={{ fontSize: 12, color: 'var(--text-muted)', margin: '18px 0 8px' }}>入出金履歴</div>
       <div className="card" style={{ padding: 0 }}>
