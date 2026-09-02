@@ -69,6 +69,37 @@ export async function fetchRaceTimes(
   return races;
 }
 
+export type GachiRace = {
+  label: string;   // 例: "大村9R"
+  href: string;     // 例: "/race/20260902/24/9R"
+  probability: string; // 例: "90.23%"
+  deadline: string | null; // 例: "21:25"
+};
+
+// ポセイドン（poseidon-boatrace.net）の「本日の注目レース」から
+// ガチガチレース（イン逃げ濃厚レースランキング）を取得する
+export async function fetchPoseidonGachigachi(): Promise<GachiRace[]> {
+  const html = await fetchHtml('https://poseidon-boatrace.net/pickup');
+  const $ = cheerio.load(html);
+
+  const races: GachiRace[] = [];
+  $('#nigeru table tbody tr').each((_, tr) => {
+    const tds = $(tr).find('td');
+    if (tds.length === 0) return;
+    const a = tds.eq(0).find('a');
+    const label = a.text().trim();
+    const href = a.attr('href') || '';
+    const probability = tds.eq(1).text().trim();
+    const resultCell = $(tr).find('td[colspan]');
+    const cellText = resultCell.text();
+    const m = cellText.match(/(\d{1,2}:\d{2})/);
+    const deadline = m ? m[1] : null;
+    if (label) races.push({ label, href, probability, deadline });
+  });
+
+  return races;
+}
+
 export async function fetchOdds2t(jcd: string, hd: string, rno: number): Promise<Record<string, number>> {
   const html = await fetchHtml(`https://www.boatrace.jp/owpc/pc/race/odds2tf?rno=${rno}&jcd=${jcd}&hd=${hd}`);
   const $ = cheerio.load(html);

@@ -7,6 +7,7 @@ export function middleware(req: NextRequest) {
   const isPublic =
     pathname === '/login' ||
     pathname === '/api/login' ||
+    pathname === '/api/poseidon' || // Vercel Cronが叩くため認証不要（公開データのみ扱う）
     pathname === '/manifest.json' ||
     pathname === '/sw.js' ||
     pathname.startsWith('/icons/');

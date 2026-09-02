@@ -8,5 +8,6 @@ export const KEYS = {
   slot: (slot: 'A' | 'B') => `cocomo:slot:${slot}`,
   history: 'cocomo:history',
   funds: 'cocomo:funds',
-  gousei: 'cocomo:gousei'
+  gousei: 'cocomo:gousei',
+  poseidon: (date: string) => `cocomo:poseidon:${date}`
 };
